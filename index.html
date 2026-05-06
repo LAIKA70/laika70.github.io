@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TradeX Pro — 登录</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #090d12;
+      --panel: #0e1520;
+      --border: #1e2d3d;
+      --accent: #00d4a0;
+      --accent2: #0077ff;
+      --text: #c8d8e8;
+      --muted: #4a6278;
+      --red: #ff4e6a;
+      --green: #00d4a0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: 'DM Mono', monospace;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,160,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,160,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridShift 20s linear infinite;
+      z-index: 0;
+    }
+
+    @keyframes gridShift {
+      from { background-position: 0 0; }
+      to { background-position: 40px 40px; }
+    }
+
+    /* Ticker tape */
+    .ticker-wrap {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 32px;
+      background: #0a1118;
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+    }
+
+    .ticker-track {
+      display: flex;
+      gap: 40px;
+      animation: ticker 30s linear infinite;
+      white-space: nowrap;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
+    @keyframes ticker {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    .tick-item { display: flex; gap: 8px; }
+    .tick-name { color: var(--muted); }
+    .tick-price { color: var(--text); }
+    .tick-up { color: var(--green); }
+    .tick-down { color: var(--red); }
+
+    /* Main layout */
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 0;
+      width: 900px;
+      height: 560px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      box-shadow: 0 0 80px rgba(0,212,160,0.07), 0 40px 100px rgba(0,0,0,0.6);
+      animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Left panel — chart visual */
+    .left-panel {
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .left-panel::after {
+      content: '';
+      position: absolute;
+      bottom: -60px; right: -60px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,212,160,0.06) 0%, transparent 70%);
+    }
+
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-icon {
+      width: 32px; height: 32px;
+      border: 1.5px solid var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      color: var(--accent);
+    }
+    .brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 20px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .brand-tag {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-left: 4px;
+    }
+
+    /* Fake chart */
+    .chart-area {
+      flex: 1;
+      margin: 32px 0 24px;
+      position: relative;
+    }
+
+    .chart-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .chart-value {
+      font-family: 'DM Serif Display', serif;
+      font-size: 36px;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    .chart-change {
+      font-size: 13px;
+      color: var(--green);
+      margin-top: 4px;
+    }
+
+    svg.sparkline {
+      width: 100%;
+      height: 100px;
+      margin-top: 20px;
+      overflow: visible;
+    }
+
+    .spark-path {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 1.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .spark-fill {
+      fill: url(#sparkGrad);
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .stat-item { }
+    .stat-label { font-size: 9px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
+    .stat-val { font-size: 13px; color: var(--text); margin-top: 4px; }
+
+    /* Right panel — login */
+    .right-panel {
+      background: var(--bg);
+      padding: 44px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .login-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 26px;
+      color: #fff;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+
+    .login-sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      margin-bottom: 36px;
+    }
+
+    .field-group { margin-bottom: 20px; }
+
+    label {
+      display: block;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    input {
+      width: 100%;
+      background: #0c1520;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 12px 14px;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.03em;
+    }
+
+    input::placeholder { color: var(--muted); opacity: 0.6; }
+
+    input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,212,160,0.08);
+    }
+
+    .options-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .checkbox-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-wrap input[type="checkbox"] {
+      width: 14px; height: 14px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .checkbox-wrap span {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .forgot {
+      font-size: 11px;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.2s;
+    }
+    .forgot:hover { color: var(--accent); }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      border: none;
+      border-radius: 2px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #000;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-login::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.5s;
+    }
+
+    .btn-login:hover { opacity: 0.9; }
+    .btn-login:hover::after { transform: translateX(100%); }
+    .btn-login:active { transform: scale(0.99); }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 24px 0;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .divider span { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; }
+
+    .btn-register {
+      width: 100%;
+      padding: 12px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-register:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .security-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 20px;
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .security-badge::before {
+      content: '🔒';
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Ticker Tape -->
+<div class="ticker-wrap">
+  <div class="ticker-track">
+    <div class="tick-item"><span class="tick-name">AAPL</span><span class="tick-price">189.42</span><span class="tick-up">▲ 1.23%</span></div>
+    <div class="tick-item"><span class="tick-name">TSLA</span><span class="tick-price">241.87</span><span class="tick-down">▼ 0.84%</span></div>
+    <div class="tick-item"><span class="tick-name">NVDA</span><span class="tick-price">872.33</span><span class="tick-up">▲ 3.17%</span></div>
+    <div class="tick-item"><span class="tick-name">BABA</span><span class="tick-price">78.65</span><span class="tick-up">▲ 0.52%</span></div>
+    <div class="tick-item"><span class="tick-name">MSFT</span><span class="tick-price">415.20</span><span class="tick-up">▲ 0.98%</span></div>
+    <div class="tick-item"><span class="tick-name">AMZN</span><span class="tick-price">182.09</span><span class="tick-down">▼ 0.31%</span></div>
+    <div class="tick-item"><span class="tick-name">BTC</span><span class="tick-price">63,420</span><span class="tick-up">▲ 2.44%</span></div>
+    <div class="tick-item"><span class="tick-name">GOOGL</span><span class="tick-price">172.55</span><span class="tick-up">▲ 1.08%</span></div>
+    <!-- duplicate for seamless loop -->
+    <div class="tick-item"><span class="tick-name">AAPL</span><span class="tick-price">189.42</span><span class="tick-up">▲ 1.23%</span></div>
+    <div class="tick-item"><span class="tick-name">TSLA</span><span class="tick-price">241.87</span><span class="tick-down">▼ 0.84%</span></div>
+    <div class="tick-item"><span class="tick-name">NVDA</span><span class="tick-price">872.33</span><span class="tick-up">▲ 3.17%</span></div>
+    <div class="tick-item"><span class="tick-name">BABA</span><span class="tick-price">78.65</span><span class="tick-up">▲ 0.52%</span></div>
+    <div class="tick-item"><span class="tick-name">MSFT</span><span class="tick-price">415.20</span><span class="tick-up">▲ 0.98%</span></div>
+    <div class="tick-item"><span class="tick-name">AMZN</span><span class="tick-price">182.09</span><span class="tick-down">▼ 0.31%</span></div>
+    <div class="tick-item"><span class="tick-name">BTC</span><span class="tick-price">63,420</span><span class="tick-up">▲ 2.44%</span></div>
+    <div class="tick-item"><span class="tick-name">GOOGL</span><span class="tick-price">172.55</span><span class="tick-up">▲ 1.08%</span></div>
+  </div>
+</div>
+
+<!-- Main card -->
+<div class="wrapper">
+  <!-- Left: chart panel -->
+  <div class="left-panel">
+    <div class="brand">
+      <div class="brand-icon">TX</div>
+      <div>
+        <div class="brand-name">TradeX<span class="brand-tag">Pro</span></div>
+      </div>
+    </div>
+
+    <div class="chart-area">
+      <div class="chart-label">沪深 300 指数</div>
+      <div class="chart-value">3,842.16</div>
+      <div class="chart-change">▲ +58.34 &nbsp;(+1.54%) 今日</div>
+
+      <svg class="sparkline" viewBox="0 0 340 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(0,212,160,0.18)"/>
+            <stop offset="100%" stop-color="rgba(0,212,160,0)"/>
+          </linearGradient>
+        </defs>
+        <!-- Fill area -->
+        <path class="spark-fill" d="M0,75 C20,70 30,60 50,55 C70,50 80,65 100,58 C120,50 130,40 150,35 C170,30 185,45 200,38 C220,30 235,20 255,18 C275,15 295,25 320,15 L340,10 L340,100 L0,100 Z"/>
+        <!-- Line -->
+        <path class="spark-path" d="M0,75 C20,70 30,60 50,55 C70,50 80,65 100,58 C120,50 130,40 150,35 C170,30 185,45 200,38 C220,30 235,20 255,18 C275,15 295,25 320,15 L340,10"/>
+      </svg>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-label">开盘</div>
+        <div class="stat-val">3,783.82</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">最高</div>
+        <div class="stat-val" style="color:var(--green)">3,856.40</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">成交量</div>
+        <div class="stat-val">4.2B</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: login form -->
+  <div class="right-panel">
+    <div class="login-title">欢迎回来</div>
+    <div class="login-sub">登录您的交易账户以继续</div>
+
+    <div class="field-group">
+      <label>账户 / 手机号</label>
+      <input type="text" placeholder="请输入账号或手机号" autocomplete="username"/>
+    </div>
+
+    <div class="field-group">
+      <label>交易密码</label>
+      <input type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+
+    <div class="options-row">
+      <label class="checkbox-wrap">
+        <input type="checkbox"/> 
+        <span>记住账号</span>
+      </label>
+      <a href="#" class="forgot">忘记密码?</a>
+    </div>
+
+    <button class="btn-login">登&nbsp;&nbsp;录</button>
+
+    <div class="divider"><span>或</span></div>
+
+    <button class="btn-register">注册新账户</button>
+
+    <div class="security-badge">256-bit SSL 安全加密连接</div>
+  </div>
+</div>
+
+</body>
+</html>
