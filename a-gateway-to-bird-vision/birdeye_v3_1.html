@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BirdEye v3.1 — 鸟类视觉建筑分析仪</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #8CC7B9;
+  --surface: #ffffff;
+  --surface2: #eef8f6;
+  --border: #c2e0da;
+  --accent: #1a9e8f;
+  --green: #2db87a;
+  --danger: #e03030;
+  --warn: #c97a0a;
+  --purple: #7c3abf;
+  --text: #14302b;
+  --muted: #5a9088;
+  --nav-h: 60px;
+  --header-h: 58px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  height: 100%; overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER ── */
+.app-header {
+  height: var(--header-h);
+  display: flex; align-items: center;
+  padding: 0 16px;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 10px;
+  position: relative; z-index: 20;
+}
+.logo-mark {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, #00e5ff 0%, #bf5af2 100%);
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(0,229,255,0.25);
+}
+.logo-wordmark {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800; font-size: 17px;
+  letter-spacing: -0.02em;
+  background: linear-gradient(90deg, #00e5ff, #bf5af2);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub { font-size: 9px; color: var(--muted); letter-spacing: 0.06em; }
+.header-right {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 8px;
+}
+.key-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.08em;
+  color: var(--muted); cursor: pointer;
+  transition: all 0.2s;
+}
+.key-btn:active { border-color: var(--accent); color: var(--accent); }
+.key-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--danger); flex-shrink: 0;
+  transition: background 0.3s;
+}
+.key-dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+/* ── MAIN CONTENT ── */
+.main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── PAGES ── */
+.page {
+  position: absolute; inset: 0;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.page.active { display: flex; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav {
+  height: var(--nav-h);
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  background: rgba(255,255,255,0.98);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  position: relative; z-index: 20;
+}
+.nav-btn {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 3px;
+  border: none; background: transparent; cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.nav-btn .nav-icon {
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.2s;
+  color: var(--muted);
+}
+.nav-btn.active .nav-icon { color: var(--accent); }
+.nav-btn .nav-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+  transition: color 0.2s;
+}
+.nav-btn.active .nav-label { color: var(--accent); }
+.nav-btn.active .nav-icon { transform: scale(1.15); }
+.nav-btn.active::after {
+  content: '';
+  position: absolute; top: 0; left: 20%; right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--purple));
+  border-radius: 0 0 3px 3px;
+}
+
+/* ════════════════════════════════════
+   PAGE 1 — INTRO
+════════════════════════════════════ */
+#page-intro {
+  padding: 0 0 32px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.intro-hero {
+  position: relative;
+  padding: 28px 20px 32px;
+  background: linear-gradient(160deg, #7ab8aa 0%, #9dd4c6 60%, #7ab8aa 100%);
+  border-bottom: 1px solid var(--border);
+  overflow: visible;
+  width: 100%;
+  box-sizing: border-box;
+}
+.intro-hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(26,158,143,0.12), transparent 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(124,58,191,0.08), transparent 60%);
+}
+.hero-eyebrow {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: rgba(255,255,255,0.75);
+  margin-bottom: 10px; position: relative;
+}
+.hero-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 28px; font-weight: 800;
+  line-height: 1.15; letter-spacing: -0.02em;
+  color: #fff;
+  margin-bottom: 12px; position: relative;
+}
+.hero-title span {
+  color: #fff;
+  text-decoration: underline;
+  text-decoration-color: rgba(255,255,255,0.4);
+  text-underline-offset: 4px;
+}
+.hero-desc {
+  font-size: 13px; color: rgba(255,255,255,0.85);
+  line-height: 1.7; position: relative;
+  max-width: 100%;
+  padding-right: 70px;
+}
+.hero-bird {
+  position: absolute; right: 16px; top: 24px;
+  font-size: 64px; opacity: 0.18;
+  animation: float 4s ease-in-out infinite;
+}
+@keyframes float {
+  0%,100% { transform: translateY(0) rotate(-5deg); }
+  50% { transform: translateY(-8px) rotate(5deg); }
+}
+
+/* ── INFO BUTTON ── */
+.info-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-left: 7px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  opacity: 0.7;
+  border: none; background: transparent; padding: 0;
+}
+.info-btn:hover, .info-btn:active { opacity: 1; transform: scale(1.1); }
+.info-btn svg { width: 100%; height: 100%; }
+
+/* ── REFS MODAL ── */
+.refs-modal {
+  display: none;
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(20,48,43,0.7);
+  backdrop-filter: blur(8px);
+  align-items: flex-end; justify-content: center;
+  padding: 0;
+}
+.refs-modal.open { display: flex; }
+.refs-sheet {
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  padding: 20px 20px 40px;
+  width: 100%; max-width: 480px;
+  max-height: 80vh; overflow-y: auto;
+  animation: sheetUp 0.3s ease;
+}
+@keyframes sheetUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.refs-handle {
+  width: 36px; height: 4px;
+  background: var(--border); border-radius: 2px;
+  margin: 0 auto 16px;
+}
+.refs-title {
+  font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 800;
+  color: var(--text); margin-bottom: 4px;
+}
+.refs-subtitle {
+  font-size: 11px; color: var(--muted); margin-bottom: 16px; line-height: 1.5;
+}
+.ref-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  text-decoration: none;
+  display: block;
+  transition: border-color 0.2s;
+}
+.ref-item:active { border-color: var(--accent); }
+.ref-cat {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 4px;
+}
+.ref-title {
+  font-size: 12px; font-weight: 600; color: var(--text);
+  line-height: 1.4; margin-bottom: 3px;
+}
+.ref-authors {
+  font-size: 10px; color: var(--muted); line-height: 1.4;
+}
+.ref-link {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 6px;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--accent); letter-spacing: 0.06em;
+}
+.refs-close {
+  width: 100%; padding: 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--muted);
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; margin-top: 8px;
+}
+.refs-note {
+  font-size: 10px; color: var(--muted); line-height: 1.6;
+  margin-top: 12px; padding: 10px 12px;
+  background: var(--surface2); border-radius: 8px;
+  border-left: 3px solid var(--warn);
+}
+
+.section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--muted);
+  padding: 20px 20px 10px;
+}
+
+/* Danger cards */
+.danger-grid {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 0 16px;
+}
+.danger-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex; gap: 14px; align-items: flex-start;
+  position: relative; overflow: hidden;
+}
+.danger-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: 3px 0 0 3px;
+}
+.danger-card.red::before { background: var(--danger); }
+.danger-card.yellow::before { background: var(--warn); }
+.danger-card.green::before { background: var(--green); }
+.dc-icon { font-size: 26px; flex-shrink: 0; margin-top: 2px; }
+.dc-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--text); margin-bottom: 4px;
+}
+.dc-desc { font-size: 11.5px; color: var(--muted); line-height: 1.6; }
+.dc-tag {
+  display: inline-block; margin-top: 6px;
+  padding: 2px 7px; border-radius: 4px;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.tag-red { background: rgba(255,59,59,0.12); color: var(--danger); border: 1px solid rgba(255,59,59,0.25); }
+.tag-yellow { background: rgba(255,184,0,0.12); color: var(--warn); border: 1px solid rgba(255,184,0,0.25); }
+.tag-green { background: rgba(57,255,20,0.1); color: var(--green); border: 1px solid rgba(57,255,20,0.2); }
+
+/* Bird eye science section */
+.science-block {
+  margin: 0 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.science-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.science-row:last-child { border-bottom: none; }
+.sci-label { color: var(--muted); font-size: 11px; }
+.sci-val { font-family: 'DM Mono', monospace; font-size: 11px; }
+.sci-human { color: #3a7068; }
+.sci-bird { color: var(--accent); font-weight: 500; }
+
+.intro-cta {
+  margin: 16px 16px 0;
+  background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(191,90,242,0.08));
+  border: 1px solid rgba(0,229,255,0.2);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+}
+.intro-cta p { font-size: 12px; color: #6080a0; line-height: 1.6; margin-bottom: 12px; }
+.btn-go {
+  display: inline-block;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border: none; border-radius: 8px;
+  color: #fff; font-family: 'Outfit', sans-serif;
+  font-size: 12px; font-weight: 800;
+  letter-spacing: 0.06em; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-go:active { opacity: 0.8; }
+
+/* ════════════════════════════════════
+   PAGE 2 — LIVE CAMERA
+════════════════════════════════════ */
+#page-live {
+  overflow: hidden;
+}
+
+.cam-wrap {
+  flex: 1;
+  position: relative;
+  background: #000;
+  overflow: hidden;
+  min-height: 0;
+}
+
+#videoEl {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+
+#uvCanvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: none; pointer-events: none;
+}
+
+.cam-placeholder {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 12px; background: var(--surface);
+}
+.cam-placeholder .ph-icon { font-size: 48px; opacity: 0.3; }
+.cam-placeholder h3 {
+  font-family: 'Outfit', sans-serif; font-size: 16px; font-weight: 700;
+}
+.cam-placeholder p { font-size: 12px; color: var(--muted); text-align: center; padding: 0 28px; line-height: 1.6; }
+
+.cam-overlay-pill {
+  position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,255,255,0.75); backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 4px 12px;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  display: none; white-space: nowrap; color: var(--purple);
+}
+
+#dangerOverlay {
+  position: absolute; inset: 0; pointer-events: none; display: none;
+}
+.d-box {
+  position: absolute;
+  border: 2px solid;
+  border-radius: 3px;
+}
+.d-box.danger { border-color: var(--danger); animation: dpulse 1.8s ease-in-out infinite; }
+.d-box.warn { border-color: var(--warn); animation: dpulse 2.2s ease-in-out infinite; }
+.d-box.safe { border-color: var(--green); }
+@keyframes dpulse {
+  0%,100% { opacity: 0.5; }
+  50% { opacity: 1; box-shadow: 0 0 10px currentColor; }
+}
+.d-label {
+  position: absolute; top: -20px; left: 0;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  padding: 2px 6px; border-radius: 3px;
+  letter-spacing: 0.06em; white-space: nowrap; color: #000;
+}
+.d-box.danger .d-label { background: var(--danger); }
+.d-box.warn .d-label { background: var(--warn); }
+.d-box.safe .d-label { background: var(--green); }
+
+/* Vision mode selector */
+.vision-bar {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.vision-tab {
+  padding: 9px 4px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: none; background: var(--surface);
+  cursor: pointer; transition: all 0.2s;
+  border-right: 1px solid var(--border);
+}
+.vision-tab:last-child { border-right: none; }
+.vision-tab .vt-icon {
+  width: 20px; height: 20px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+}
+.vision-tab.vt-active .vt-icon { color: var(--accent); }
+.vision-tab .vt-label {
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+.vision-tab.vt-active { background: var(--surface2); }
+.vision-tab.vt-active .vt-label { color: var(--accent); }
+
+.cam-controls {
+  padding: 10px 14px 12px;
+  display: flex; gap: 8px;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.btn-cam {
+  flex: 1; padding: 11px 8px;
+  border-radius: 10px; border: none; cursor: pointer;
+  font-family: 'Outfit', sans-serif; font-size: 11px;
+  font-weight: 700; letter-spacing: 0.04em;
+  transition: opacity 0.2s;
+}
+.btn-cam:active { opacity: 0.8; }
+.btn-cam.primary {
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  color: #000;
+}
+.btn-cam.secondary {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted);
+}
+.btn-cam:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ════════════════════════════════════
+   PAGE 3 — UPLOAD ANALYSIS
+════════════════════════════════════ */
+#page-upload {
+  padding: 16px 16px 32px;
+  gap: 12px;
+}
+
+.upload-drop {
+  border: 2px dashed var(--border);
+  border-radius: 14px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s;
+  background: var(--surface);
+  position: relative; overflow: hidden;
+}
+.upload-drop.has-img { border-style: solid; border-color: var(--accent); padding: 0; }
+.upload-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-drop .ud-icon { font-size: 36px; opacity: 0.4; margin-bottom: 8px; }
+.upload-drop .ud-title {
+  font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 700; margin-bottom: 4px;
+}
+.upload-drop .ud-sub { font-size: 11px; color: var(--muted); line-height: 1.5; }
+#previewImg { width: 100%; border-radius: 12px; display: none; }
+
+.view-toggle {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden;
+}
+.vt-btn {
+  padding: 9px; border: none; background: var(--surface2);
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--muted); cursor: pointer; transition: all 0.2s;
+}
+.vt-btn:first-child { border-right: 1px solid var(--border); }
+.vt-btn.vt-on { background: rgba(191,90,242,0.18); color: var(--purple); }
+
+.img-preview-wrap {
+  position: relative; border-radius: 12px; overflow: hidden; background: #000;
+}
+.img-preview-wrap img {
+  width: 100%; display: block; transition: filter 0.4s;
+}
+.img-preview-wrap img.uv-on {
+  filter: hue-rotate(40deg) saturate(2.2) brightness(0.88) contrast(1.15) sepia(0.15);
+}
+.img-badge {
+  position: absolute; bottom: 8px; right: 8px;
+  background: rgba(255,255,255,0.82); backdrop-filter: blur(6px);
+  padding: 3px 8px; border-radius: 5px;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 0.08em; color: var(--purple);
+}
+
+.btn-analyze {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border: none; border-radius: 10px; color: #fff;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800;
+  letter-spacing: 0.05em; cursor: pointer; transition: opacity 0.2s;
+}
+.btn-analyze:active { opacity: 0.8; }
+.btn-analyze:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.result-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.rc-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 7px;
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+.rc-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--muted); flex-shrink: 0;
+}
+.rc-dot.running { background: var(--warn); animation: blink 0.8s infinite; }
+.rc-dot.done { background: var(--green); }
+.rc-dot.err { background: var(--danger); }
+@keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:1} }
+.rc-body {
+  padding: 14px; min-height: 80px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--muted);
+  max-height: 340px; overflow-y: auto;
+}
+.rc-body.filled { display: block; color: var(--text); max-height: 340px; overflow-y: auto; }
+.ai-rating-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px;
+  font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; margin-bottom: 10px;
+}
+.arb-safe { background: rgba(57,255,20,0.1); color: var(--green); border: 1px solid rgba(57,255,20,0.25); }
+.arb-warn { background: rgba(255,184,0,0.1); color: var(--warn); border: 1px solid rgba(255,184,0,0.25); }
+.arb-danger { background: rgba(255,59,59,0.1); color: var(--danger); border: 1px solid rgba(255,59,59,0.25); }
+.ai-section-head {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 0.12em; text-transform: uppercase;
+  margin: 10px 0 5px;
+}
+.ai-item {
+  display: flex; gap: 7px; margin-bottom: 5px; align-items: flex-start;
+  font-size: 12px; line-height: 1.6;
+}
+.ai-item-icon { flex-shrink: 0; margin-top: 1px; font-size: 11px; }
+
+.thinkdots { display: flex; gap: 5px; }
+.thinkdot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--warn); animation: thinking 1.2s ease-in-out infinite;
+}
+.thinkdot:nth-child(2) { animation-delay: 0.2s; }
+.thinkdot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes thinking { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1.2)} }
+
+/* ════════════════════════════════════
+   PAGE 4 — API KEY SETTINGS
+════════════════════════════════════ */
+#page-key {
+  padding: 24px 16px 40px;
+  gap: 16px;
+}
+
+.key-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+}
+.key-hero .kh-icon { font-size: 40px; margin-bottom: 10px; }
+.key-hero h2 {
+  font-family: 'Outfit', sans-serif; font-size: 17px; font-weight: 800;
+  margin-bottom: 8px;
+}
+.key-hero p { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+.key-status-bar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.ksb-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0; transition: all 0.3s;
+}
+.ksb-dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.ksb-dot.off { background: var(--danger); }
+.ksb-text { font-size: 12px; flex: 1; }
+.ksb-text strong { color: var(--text); display: block; font-size: 13px; margin-bottom: 1px; }
+.ksb-text span { color: var(--muted); font-size: 11px; }
+
+.key-input-wrap { display: flex; flex-direction: column; gap: 8px; }
+.key-input-label {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+}
+#keyInputField {
+  width: 100%; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  letter-spacing: 0.04em; outline: none;
+  transition: border-color 0.2s;
+}
+#keyInputField:focus { border-color: var(--accent); }
+#keyErrMsg {
+  display: none; color: var(--danger);
+  font-size: 11px; padding-left: 2px;
+}
+
+.btn-save-key {
+  width: 100%; padding: 13px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  border: none; border-radius: 10px; color: #fff;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800;
+  cursor: pointer; letter-spacing: 0.05em; transition: opacity 0.2s;
+}
+.btn-save-key:active { opacity: 0.8; }
+
+.btn-clear-key {
+  width: 100%; padding: 11px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 10px; color: var(--muted);
+  font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-clear-key:active { border-color: var(--danger); color: var(--danger); }
+
+.feature-compare {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+.fc-head {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+.fc-head div {
+  padding: 8px 10px;
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); border-right: 1px solid var(--border);
+}
+.fc-head div:last-child { border-right: none; }
+.fc-row {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1px solid rgba(22,32,53,0.6);
+  font-size: 11px;
+}
+.fc-row:last-child { border-bottom: none; }
+.fc-row div {
+  padding: 9px 10px; border-right: 1px solid rgba(22,32,53,0.6);
+  line-height: 1.4;
+}
+.fc-row div:last-child { border-right: none; }
+.fc-row div:first-child { color: var(--muted); font-size: 10px; }
+.fc-yes { color: var(--green); font-size: 13px; }
+.fc-no { color: var(--danger); font-size: 13px; }
+
+.key-note {
+  font-size: 11px; color: var(--muted); line-height: 1.7;
+  padding: 0 4px;
+}
+.key-note a { color: var(--accent); text-decoration: none; }
+
+/* ── SCAN OVERLAY ── */
+.scan-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.scan-box {
+  background: rgba(255,255,255,0.78); backdrop-filter: blur(8px);
+  border: 1px solid rgba(0,229,255,0.3); border-radius: 12px;
+  padding: 12px 20px;
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 0.08em; color: var(--accent);
+}
+
+/* Live result strip */
+#liveResultStrip {
+  position: absolute; bottom: 10px; left: 10px; right: 10px;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,229,255,0.2); border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 12px; line-height: 1.5;
+  display: none;
+  animation: stripIn 0.3s ease;
+}
+/* ── FLOATING CAM INFO BTN ── */
+.cam-info-btn {
+  position: absolute;
+  bottom: 14px; right: 14px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: rgba(26,158,143,0.85);
+  backdrop-filter: blur(6px);
+  border: 1.5px solid rgba(255,255,255,0.4);
+  color: #fff;
+  cursor: pointer;
+  z-index: 10;
+  padding: 6px;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.cam-info-btn:active { transform: scale(0.92); background: rgba(26,158,143,1); }
+.cam-info-btn svg { width: 100%; height: 100%; }
+.provider-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 10px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 10px; cursor: pointer;
+  transition: all 0.2s; text-align: left;
+  position: relative; overflow: hidden;
+}
+.provider-btn.selected {
+  border-color: var(--accent);
+  background: rgba(26,158,143,0.08);
+}
+.provider-btn:active { transform: scale(0.98); }
+.prov-logo {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Outfit', sans-serif; font-size: 14px;
+  font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.prov-info { flex: 1; min-width: 0; }
+.prov-name {
+  font-family: 'Outfit', sans-serif; font-size: 12px;
+  font-weight: 700; color: var(--text); line-height: 1.2;
+}
+.prov-model {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--muted); letter-spacing: 0.04em;
+}
+.prov-badge {
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: 0.08em; padding: 2px 5px;
+  border-radius: 4px; font-weight: 600;
+  flex-shrink: 0;
+}
+.prov-badge.free { background: rgba(45,184,122,0.15); color: var(--green); border: 1px solid rgba(45,184,122,0.3); }
+.prov-badge.paid { background: rgba(90,144,136,0.12); color: var(--muted); border: 1px solid var(--border); }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="logo-mark">🐦</div>
+  <div>
+    <div class="logo-wordmark">BirdEye</div>
+    <div class="logo-sub" data-i18n="logo_sub">鸟类视觉建筑分析仪</div>
+  </div>
+  <div class="header-right">
+    <div class="key-btn" onclick="goPage('key')">
+      <div class="key-dot" id="keyDot"></div>
+      <span data-i18n="api_key">API KEY</span>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- ══ PAGE 1: INTRO ══ -->
+  <div class="page active" id="page-intro">
+    <div class="intro-hero">
+      <div class="hero-bird">🐦</div>
+      <div class="hero-eyebrow" data-i18n="hero_eyebrow">Bird-Friendly Architecture</div>
+      <h1 class="hero-title" data-i18n="hero_title">用<span>鸟的眼睛</span><br>看建筑</h1>
+      <p class="hero-desc" data-i18n="hero_desc">每年全球有数亿只鸟撞上建筑玻璃死亡。BirdEye 帮你看见鸟类看到的世界，用 AI 识别危险区域，让建筑设计更友好。</p>
+    </div>
+
+    <div class="section-title" data-i18n="sec_dangers">AI 能识别哪些危险？</div>
+    <div class="danger-grid">
+      <div class="danger-card red">
+        <div class="dc-icon">🪟</div>
+        <div>
+          <div class="dc-title" data-i18n="d1_title">大面积玻璃幕墙</div>
+          <div class="dc-desc" data-i18n="d1_desc">连续大块玻璃反射天空和植被，鸟会误以为是可以飞过去的开放空间，直接撞上。</div>
+          <span class="dc-tag tag-red" data-i18n="tag_high">高危</span>
+        </div>
+      </div>
+      <div class="danger-card red">
+        <div class="dc-icon">🔲</div>
+        <div>
+          <div class="dc-title" data-i18n="d2_title">透明玻璃护栏 / 栏杆</div>
+          <div class="dc-desc" data-i18n="d2_desc">阳台、楼梯、天桥的透明护栏对鸟类视觉几乎完全不可见，是最常见的撞击死亡原因之一。</div>
+          <span class="dc-tag tag-red" data-i18n="tag_high">高危</span>
+        </div>
+      </div>
+      <div class="danger-card red">
+        <div class="dc-icon">🏙️</div>
+        <div>
+          <div class="dc-title" data-i18n="d3_title">视觉穿透通道</div>
+          <div class="dc-desc" data-i18n="d3_desc">建筑两侧都是玻璃，鸟看到的是"可以直接飞穿"的走廊，会全速飞入撞上对面玻璃。</div>
+          <span class="dc-tag tag-red" data-i18n="tag_high">高危</span>
+        </div>
+      </div>
+      <div class="danger-card yellow">
+        <div class="dc-icon">🌊</div>
+        <div>
+          <div class="dc-title" data-i18n="d4_title">高反射玻璃</div>
+          <div class="dc-desc" data-i18n="d4_desc">将周围树木和天空完美反射的玻璃，会让鸟误判为真实的自然环境，尤其在阳光充足时。</div>
+          <span class="dc-tag tag-yellow" data-i18n="tag_med">中等风险</span>
+        </div>
+      </div>
+      <div class="danger-card yellow">
+        <div class="dc-icon">🌙</div>
+        <div>
+          <div class="dc-title" data-i18n="d5_title">夜间室内灯光</div>
+          <div class="dc-desc" data-i18n="d5_desc">夜间迁徙的鸟会被建筑灯光吸引，反复绕飞直至精疲力竭坠落，或撞上看不见的玻璃。</div>
+          <span class="dc-tag tag-yellow" data-i18n="tag_seasonal">迁徙季高危</span>
+        </div>
+      </div>
+      <div class="danger-card green">
+        <div class="dc-icon">🌿</div>
+        <div>
+          <div class="dc-title" data-i18n="d6_title">植被外墙 / 绿化遮挡</div>
+          <div class="dc-desc" data-i18n="d6_desc">外墙植被在鸟类UV视觉下极度醒目，天然形成"这里有障碍物"的视觉信号，安全友好。</div>
+          <span class="dc-tag tag-green" data-i18n="tag_safe">安全友好</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-title" data-i18n="sec_science" style="display:flex;align-items:center;">
+      <span data-i18n="sec_science">鸟眼 vs 人眼</span>
+      <button class="info-btn" onclick="openRefs('vision')" title="查看科研来源" aria-label="科研来源">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10.5" stroke="rgba(26,158,143,0.6)" stroke-width="1.5" fill="rgba(26,158,143,0.08)"/>
+          <circle cx="12" cy="8" r="1.2" fill="rgba(26,158,143,0.9)"/>
+          <rect x="11" y="11" width="2" height="6" rx="1" fill="rgba(26,158,143,0.9)"/>
+        </svg>
+      </button>
+    </div>
+    <div class="science-block">
+      <div class="science-row">
+        <span class="sci-label" data-i18n="sci_color">色觉类型</span>
+        <span class="sci-human sci-val" data-i18n="sci_color_h">三色（RGB）</span>
+        <span class="sci-bird sci-val" data-i18n="sci_color_b">四色（含UV）</span>
+      </div>
+      <div class="science-row">
+        <span class="sci-label" data-i18n="sci_fov">总视野角度</span>
+        <span class="sci-human sci-val">~200°</span>
+        <span class="sci-bird sci-val">~340°</span>
+      </div>
+      <div class="science-row">
+        <span class="sci-label" data-i18n="sci_stereo">立体视觉区</span>
+        <span class="sci-human sci-val" data-i18n="sci_stereo_h">~120°（正前）</span>
+        <span class="sci-bird sci-val" data-i18n="sci_stereo_b">~20°（极窄）</span>
+      </div>
+      <div class="science-row">
+        <span class="sci-label" data-i18n="sci_depth">深度判断</span>
+        <span class="sci-human sci-val" data-i18n="sci_depth_h">较强</span>
+        <span class="sci-bird sci-val" data-i18n="sci_depth_b">较弱（侧视为主）</span>
+      </div>
+      <div class="science-row">
+        <span class="sci-label" data-i18n="sci_glass">玻璃识别</span>
+        <span class="sci-human sci-val" data-i18n="sci_glass_h">能感知</span>
+        <span class="sci-bird sci-val" data-i18n="sci_glass_b">极差，常误判</span>
+      </div>
+    </div>
+
+    <div class="intro-cta">
+      <p data-i18n="cta_desc">开启实时摄像头，切换到「鸟类视野」模式，亲眼看看鸟儿眼中的世界是什么样的</p>
+      <button class="btn-go" onclick="goPage('live')" data-i18n="cta_btn">开始使用 →</button>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 2: LIVE CAMERA ══ -->
+  <div class="page" id="page-live">
+    <!-- Vision mode bar -->
+    <div class="vision-bar">
+      <button class="vision-tab vt-active" id="vt-human" onclick="setVisionMode('human')">
+        <span class="vt-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg></span>
+        <span class="vt-label" data-i18n="vt_human">人类视角</span>
+      </button>
+      <button class="vision-tab" id="vt-uv" onclick="setVisionMode('uv')">
+        <span class="vt-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9 8v5a3 3 0 006 0V8"/><line x1="8" y1="20" x2="16" y2="20" opacity="0.4"/></svg></span>
+        <span class="vt-label" data-i18n="vt_uv">鸟类UV</span>
+      </button>
+      <button class="vision-tab" id="vt-bird" onclick="setVisionMode('bird')">
+        <span class="vt-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <ellipse cx="12" cy="12" rx="10" ry="7" stroke="currentColor" stroke-width="1.8" fill="none"/>
+            <circle cx="12" cy="12" r="3" fill="currentColor" opacity="0.7"/>
+            <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          </svg>
+        </span>
+        <span class="vt-label" data-i18n="vt_bird">鸟类全视野</span>
+      </button>
+    </div>
+
+    <div class="cam-wrap" id="camWrap">
+      <div class="cam-placeholder" id="camPlaceholder">
+        <div class="ph-icon" style="opacity:0.3;"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <h3>实时鸟眼视角</h3>
+        <p>开启摄像头，实时模拟鸟类视觉，AI标注危险玻璃区域</p>
+      </div>
+      <!-- Floating info button bottom-right of camera area -->
+      <button class="cam-info-btn" onclick="openRefs('fisheye')" aria-label="科研来源">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10.5" stroke="currentColor" stroke-width="1.8" fill="rgba(255,255,255,0.15)"/>
+          <circle cx="12" cy="8" r="1.4" fill="currentColor"/>
+          <rect x="10.8" y="11" width="2.4" height="7" rx="1.2" fill="currentColor"/>
+        </svg>
+      </button>
+      <video id="videoEl" autoplay playsinline muted></video>
+      <canvas id="uvCanvas"></canvas>
+      <div class="cam-overlay-pill" id="modePill"></div>
+      <div id="dangerOverlay"></div>
+      <div id="liveResultStrip"></div>
+    </div>
+
+    <div class="cam-controls">
+      <button class="btn-cam primary" id="btnStartCam" onclick="startCamera()" data-i18n="btn_start_cam">开启摄像头</button>
+      <button class="btn-cam secondary" id="btnAILive" onclick="analyzeLive()" disabled data-i18n="btn_ai_analyze">🔍 AI分析</button>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 3: UPLOAD ══ -->
+  <div class="page" id="page-upload">
+    <div class="upload-drop" id="uploadDrop">
+      <input type="file" accept="image/*" id="fileInput" onchange="handleFile(event)">
+      <div id="uploadPh">
+        <div class="ud-icon">🏙️</div>
+        <div class="ud-title" data-i18n="upload_title">上传建筑照片</div>
+        <div class="ud-sub" data-i18n="upload_sub">点击选择或拍照上传<br>JPG · PNG · WEBP</div>
+      </div>
+      <img id="previewImg" alt="preview">
+    </div>
+
+    <div id="imgControls" style="display:none; flex-direction:column; gap:10px;">
+      <div class="view-toggle">
+        <button class="vt-btn vt-on" id="ivHuman" onclick="setImgMode('human')">👁 人类视角</button>
+        <button class="vt-btn" id="ivBird" onclick="setImgMode('bird')">🔮 鸟类UV视角</button>
+      </div>
+      <div class="img-preview-wrap">
+        <img id="uvPreview" alt="">
+        <div class="img-badge" id="imgBadge">👁 人类视角</div>
+      </div>
+    </div>
+
+    <button class="btn-analyze" id="btnAnalyze" onclick="analyzeImage()" disabled>
+      🤖 AI鸟类视觉分析
+    </button>
+
+    <div class="result-card" id="resultCard" style="display:none;">
+      <div class="rc-head">
+        <div class="rc-dot" id="rcDot"></div>
+        <span id="rcTitle">分析结果</span>
+      </div>
+      <div class="rc-body" id="rcBody">
+        <div class="thinkdots">
+          <div class="thinkdot"></div><div class="thinkdot"></div><div class="thinkdot"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ PAGE 4: SETTINGS ══ -->
+  <div class="page" id="page-key">
+
+    <div class="key-status-bar" style="margin:16px 16px 0;">
+      <div class="ksb-dot" id="ksbDot"></div>
+      <div class="ksb-text">
+        <strong id="ksbTitle">未设置 API Key</strong>
+        <span id="ksbSub">设置后解锁AI分析功能</span>
+      </div>
+    </div>
+
+    <!-- Language -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 16px 0;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;" data-i18n="lang_label">语言 / Language</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button id="lang-zh" onclick="setLang('zh')" style="padding:10px 8px;border-radius:8px;border:2px solid var(--accent);background:rgba(26,158,143,0.1);color:var(--accent);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🇨🇳 中文</button>
+        <button id="lang-en" onclick="setLang('en')" style="padding:10px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">🇬🇧 English</button>
+      </div>
+    </div>
+
+    <!-- Provider selector -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin:12px 16px 0;">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;" id="providerLabel">AI 服务商</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+
+        <button class="provider-btn" id="prov-gemini" onclick="selectProvider('gemini')">
+          <div class="prov-logo" style="background:linear-gradient(135deg,#4285f4,#34a853);">G</div>
+          <div class="prov-info">
+            <div class="prov-name">Gemini</div>
+            <div class="prov-model">2.0 Flash</div>
+          </div>
+          <div class="prov-badge free">免费</div>
+        </button>
+
+        <button class="provider-btn selected" id="prov-anthropic" onclick="selectProvider('anthropic')">
+          <div class="prov-logo" style="background:linear-gradient(135deg,#c17a3a,#e8956d);">A</div>
+          <div class="prov-info">
+            <div class="prov-name">Claude</div>
+            <div class="prov-model">Sonnet 4</div>
+          </div>
+          <div class="prov-badge paid">有额度</div>
+        </button>
+
+        <button class="provider-btn" id="prov-openai" onclick="selectProvider('openai')">
+          <div class="prov-logo" style="background:linear-gradient(135deg,#10a37f,#1a7f64);">O</div>
+          <div class="prov-info">
+            <div class="prov-name">OpenAI</div>
+            <div class="prov-model">GPT-4o mini</div>
+          </div>
+          <div class="prov-badge paid">有额度</div>
+        </button>
+
+        <button class="provider-btn" id="prov-deepseek" onclick="selectProvider('deepseek')">
+          <div class="prov-logo" style="background:linear-gradient(135deg,#5b6af0,#8b5cf6);">D</div>
+          <div class="prov-info">
+            <div class="prov-name">DeepSeek</div>
+            <div class="prov-model">V3</div>
+          </div>
+          <div class="prov-badge paid">有额度</div>
+        </button>
+
+      </div>
+      <div id="providerNote" style="margin-top:10px;padding:8px 10px;background:var(--surface2);border-radius:8px;font-size:11px;color:var(--muted);line-height:1.5;"></div>
+    </div>
+
+    <!-- Key input -->
+    <div class="key-input-wrap" style="margin:12px 16px 0;">
+      <div class="key-input-label" id="keyInputLabel">输入 API Key</div>
+      <div style="position:relative;">
+        <input id="keyInputField" type="password" placeholder="AIza..." style="padding-right:44px;">
+        <button onclick="toggleKeyVisibility()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+      </div>
+      <div id="keyErrMsg" style="display:none;color:var(--danger);font-size:11px;padding-left:2px;margin-top:4px;"></div>
+      <button class="btn-save-key" id="btnSaveKey" onclick="saveKey()">保存</button>
+      <button class="btn-clear-key" onclick="clearKey()" id="btnClearKey">清除已保存的 Key</button>
+    </div>
+
+    <!-- Feature compare -->
+    <div class="feature-compare" style="margin:12px 16px 0;">
+      <div class="fc-head">
+        <div data-i18n="fc_feature">功能</div><div data-i18n="fc_no_key">无Key</div><div data-i18n="fc_with_key">有Key</div>
+      </div>
+      <div class="fc-row"><div data-i18n="fc_uv">实时UV视角</div><div><span class="fc-yes">✓</span></div><div><span class="fc-yes">✓</span></div></div>
+      <div class="fc-row"><div data-i18n="fc_bird_vision">鸟类全视野</div><div><span class="fc-yes">✓</span></div><div><span class="fc-yes">✓</span></div></div>
+      <div class="fc-row"><div data-i18n="fc_ai_mark">AI危险区标注</div><div><span class="fc-no">✗</span></div><div><span class="fc-yes">✓</span></div></div>
+      <div class="fc-row"><div data-i18n="fc_img_analysis">图片AI分析</div><div><span class="fc-no">✗</span></div><div><span class="fc-yes">✓</span></div></div>
+    </div>
+
+    <p class="key-note" id="keyNote" style="margin:12px 16px 16px;"></p>
+  </div>
+
+</div>
+
+<!-- REFS MODAL -->
+<div class="refs-modal" id="refsModal" onclick="if(event.target===this)closeRefs()">
+  <div class="refs-sheet">
+    <div class="refs-handle"></div>
+    <div class="refs-title" id="refsModalTitle">科研来源</div>
+    <div class="refs-subtitle" id="refsModalSub">点击条目查看原始论文或资料</div>
+    <div id="refsModalBody"></div>
+    <div class="refs-note" id="refsModalNote">
+      ⚠️ 本App的视觉模拟为科普近似演示，非精确科学测量。鸟类视觉因物种差异而有所不同。
+    </div>
+    <button class="refs-close" onclick="closeRefs()">关闭</button>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-intro" onclick="goPage('intro')">
+    <span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+      <line x1="9" y1="7" x2="15" y2="7"/>
+      <line x1="9" y1="11" x2="15" y2="11"/>
+    </svg></span>
+    <span class="nav-label" data-i18n="nav_intro">介绍</span>
+  </button>
+  <button class="nav-btn" id="nav-live" onclick="goPage('live')">
+    <span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M5.6 5.6A9 9 0 1018.4 18.4"/>
+      <path d="M8.5 8.5A5 5 0 1115.5 15.5"/>
+    </svg></span>
+    <span class="nav-label" data-i18n="nav_live">实时</span>
+  </button>
+  <button class="nav-btn" id="nav-upload" onclick="goPage('upload')">
+    <span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="3"/>
+      <circle cx="12" cy="10" r="3"/>
+      <path d="M7 20c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
+    </svg></span>
+    <span class="nav-label" data-i18n="nav_upload">分析</span>
+  </button>
+  <button class="nav-btn" id="nav-key" onclick="goPage('key')">
+    <span class="nav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+    </svg></span>
+    <span class="nav-label" data-i18n="nav_settings">设置</span>
+  </button>
+</nav>
+
+<script>
+const LANG={zh:{logo_sub:'鸟类视觉建筑分析仪',api_key:'API KEY',hero_eyebrow:'Bird-Friendly Architecture',hero_title:'用<span>鸟的眼睛</span><br>看建筑',hero_desc:'每年全球有数亿只鸟撞上建筑玻璃死亡。BirdEye 帮你看见鸟类看到的世界，用 AI 识别危险区域，让建筑设计更友好。',sec_dangers:'AI 能识别哪些危险？',d1_title:'大面积玻璃幕墙',d1_desc:'连续大块玻璃反射天空和植被，鸟会误以为是可以飞过去的开放空间，直接撞上。',d2_title:'透明玻璃护栏 / 栏杆',d2_desc:'阳台、楼梯、天桥的透明护栏对鸟类视觉几乎完全不可见，是最常见的撞击死亡原因之一。',d3_title:'视觉穿透通道',d3_desc:'建筑两侧都是玻璃，鸟看到的是"可以直接飞穿"的走廊，会全速飞入撞上对面玻璃。',d4_title:'高反射玻璃',d4_desc:'将周围树木和天空完美反射的玻璃，会让鸟误判为真实的自然环境，尤其在阳光充足时。',d5_title:'夜间室内灯光',d5_desc:'夜间迁徙的鸟会被建筑灯光吸引，反复绕飞直至精疲力竭坠落，或撞上看不见的玻璃。',d6_title:'植被外墙 / 绿化遮挡',d6_desc:'外墙植被在鸟类UV视觉下极度醒目，天然形成"这里有障碍物"的视觉信号，安全友好。',tag_high:'高危',tag_med:'中等风险',tag_seasonal:'迁徙季高危',tag_safe:'安全友好',sec_science:'鸟眼 vs 人眼',sci_color:'色觉类型',sci_color_h:'三色（RGB）',sci_color_b:'四色（含UV）',sci_fov:'总视野角度',sci_stereo:'立体视觉区',sci_stereo_h:'~120°（正前）',sci_stereo_b:'~20°（极窄）',sci_depth:'深度判断',sci_depth_h:'较强',sci_depth_b:'较弱（侧视为主）',sci_glass:'玻璃识别',sci_glass_h:'能感知',sci_glass_b:'极差，常误判',cta_desc:'开启实时摄像头，切换到「鸟类视野」模式，亲眼看看鸟儿眼中的世界是什么样的',cta_btn:'开始使用 →',vt_human:'人类视角',vt_uv:'鸟类UV',vt_bird:'鸟类全视野',btn_start_cam:'开启摄像头',cam_active:'✓ 已开启',btn_ai_analyze:'AI 分析',cam_ph_title:'实时鸟眼视角',cam_ph_desc:'开启摄像头，实时模拟鸟类视觉，AI标注危险玻璃区域',upload_title:'上传建筑照片',upload_sub:'点击选择或拍照上传<br>JPG · PNG · WEBP',btn_analyze:'AI 鸟类视觉分析',iv_human:'👁 人类视角',iv_bird:'🔮 鸟类UV视角',img_badge_human:'👁 人类视角',img_badge_bird:'🔮 鸟类UV视角（模拟）',settings_title:'API Key 设置',settings_desc:'设置 Anthropic API Key 后可使用 AI 智能分析功能。<br>不设置也可以使用实时UV视角模拟。',lang_label:'语言 / Language',key_not_set:'未设置 API Key',key_not_set_sub:'设置后解锁AI分析功能，不设置可继续使用UV视角',key_is_set:'API Key 已设置 ✓',key_is_set_sub:'AI分析功能已解锁，Key保存在本地',fc_feature:'功能',fc_no_key:'无Key',fc_with_key:'有Key',fc_uv:'实时UV视角',fc_bird_vision:'鸟类全视野模拟',fc_ai_mark:'AI危险区标注',fc_img_analysis:'图片AI分析',fc_suggestions:'改进建议',key_input_label:'输入你的 API Key',key_placeholder:'sk-ant-api03-...',key_err:'格式不对，Key 应以 sk-ant- 开头',btn_save_key:'保存 API Key',btn_clear_key:'清除已保存的 Key',key_saved:'✓ 已保存！',key_note:'还没有 Key？去 <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a> 免费注册，新账户有约 $5 免费额度，足够数百次分析。<br><br><strong style="color:var(--muted);">Key 仅保存在你的手机本地，不会上传到任何服务器。</strong>',nav_intro:'介绍',nav_live:'实时',nav_upload:'分析',nav_settings:'设置',rc_analyzing:'AI 分析中…',rc_done:'分析完成',rc_fail:'分析失败',rc_need_key:'需要 API Key',rc_need_key_msg:'请先在「设置」页面输入 Anthropic API Key，才能使用AI分析功能。',rc_no_key_note:'不设置Key也可以使用UV视角切换功能。',err_cam:'无法访问摄像头：',err_connect:'连接失败：',err_check_key:'请检查API Key是否正确',pill_uv:'🔮 鸟类UV视角',pill_bird:'🐦 鸟类全视野模拟',scan_analyzing:'AI 分析中…',no_danger:'✓ 未检测到明显危险玻璃区域',live_no_key:'⚠️ 请先在「设置」页面输入 API Key 才能使用AI分析功能',title_tag:'BirdEye — 鸟类视觉建筑分析仪'},
+en:{logo_sub:'Bird Vision Architecture Analyzer',api_key:'API KEY',hero_eyebrow:'Bird-Friendly Architecture',hero_title:'See Buildings<br>Through <span>Bird Eyes</span>',hero_desc:'Billions of birds die each year from colliding with building glass. BirdEye simulates bird vision and uses AI to identify danger zones, helping architects design more bird-friendly buildings.',sec_dangers:'What Can AI Detect?',d1_title:'Large Glass Facades',d1_desc:'Continuous glass panels reflect sky and vegetation — birds mistake them for open space and fly directly into them.',d2_title:'Transparent Glass Railings',d2_desc:'Clear balcony, stairway, and bridge railings are nearly invisible to birds, making them one of the most common collision hazards.',d3_title:'Visual Pass-Through Corridors',d3_desc:'When glass lines both sides of a building, birds perceive a flyable corridor and collide with the far glass at full speed.',d4_title:'Highly Reflective Glass',d4_desc:'Glass that perfectly mirrors surrounding trees and sky causes birds to misjudge it as real natural environment, especially in sunlight.',d5_title:'Interior Night Lighting',d5_desc:'Migrating birds at night are attracted to building lights, circling until exhausted or colliding with invisible glass.',d6_title:'Green Walls / Vegetation',d6_desc:'Plant-covered facades glow vividly in bird UV vision, naturally signalling "obstacle here" — safe and bird-friendly.',tag_high:'High Risk',tag_med:'Medium Risk',tag_seasonal:'Migration Season Risk',tag_safe:'Bird Friendly',sec_science:'Bird Eye vs Human Eye',sci_color:'Color Vision',sci_color_h:'Trichromat (RGB)',sci_color_b:'Tetrachromat (+ UV)',sci_fov:'Total Field of View',sci_stereo:'Binocular Zone',sci_stereo_h:'~120° (front)',sci_stereo_b:'~20° (very narrow)',sci_depth:'Depth Perception',sci_depth_h:'Strong',sci_depth_b:'Weak (side-viewing)',sci_glass:'Glass Detection',sci_glass_h:'Can perceive',sci_glass_b:'Very poor, often misjudged',cta_desc:'Open the live camera and switch to Bird Vision mode to see the world as birds do',cta_btn:'Get Started →',vt_human:'Human',vt_uv:'Bird UV',vt_bird:'Bird Full Vision',btn_start_cam:'Open Camera',cam_active:'✓ Active',btn_ai_analyze:'AI Analyze',cam_ph_title:'Live Bird Eye View',cam_ph_desc:'Open your camera to simulate bird vision in real time and mark dangerous glass zones with AI',upload_title:'Upload Building Photo',upload_sub:'Tap to select or take a photo<br>JPG · PNG · WEBP',btn_analyze:'AI Bird Vision Analysis',iv_human:'👁 Human View',iv_bird:'🔮 Bird UV View',img_badge_human:'👁 Human View',img_badge_bird:'🔮 Bird UV View (simulated)',settings_title:'API Key Settings',settings_desc:'Add an Anthropic API Key to unlock AI analysis features.<br>UV vision simulation works without a key.',lang_label:'语言 / Language',key_not_set:'No API Key Set',key_not_set_sub:'Add a key to unlock AI analysis. UV vision works without one.',key_is_set:'API Key Active ✓',key_is_set_sub:'AI analysis unlocked. Key stored locally on your device.',fc_feature:'Feature',fc_no_key:'No Key',fc_with_key:'With Key',fc_uv:'Live UV Vision',fc_bird_vision:'Full Bird Vision Sim',fc_ai_mark:'AI Danger Marking',fc_img_analysis:'Photo AI Analysis',fc_suggestions:'Design Suggestions',key_input_label:'Enter your API Key',key_placeholder:'sk-ant-api03-...',key_err:'Invalid format — key must start with sk-ant-',btn_save_key:'Save API Key',btn_clear_key:'Clear Saved Key',key_saved:'✓ Saved!',key_note:'No key yet? Sign up free at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent);">console.anthropic.com</a> — new accounts get ~$5 free credit, enough for hundreds of analyses.<br><br><strong style="color:var(--muted);">Your key is stored only on your device and never uploaded anywhere.</strong>',nav_intro:'Intro',nav_live:'Live',nav_upload:'Analyze',nav_settings:'Settings',rc_analyzing:'Analyzing…',rc_done:'Analysis Complete',rc_fail:'Analysis Failed',rc_need_key:'API Key Required',rc_need_key_msg:'Please add an Anthropic API Key in Settings to use AI analysis.',rc_no_key_note:'UV vision switching works without a key.',err_cam:'Cannot access camera: ',err_connect:'Connection failed: ',err_check_key:'Please check your API Key',pill_uv:'🔮 Bird UV Vision',pill_bird:'🐦 Bird Full Vision',scan_analyzing:'AI Analyzing…',no_danger:'✓ No significant glass hazards detected',live_no_key:'⚠️ Please add an API Key in Settings to use AI analysis',title_tag:'BirdEye — Bird Vision Architecture Analyzer'}};
+
+let apiKey=localStorage.getItem('birdeye_key')||'';
+let currentLang=localStorage.getItem('birdeye_lang')||'zh';
+let currentProvider=localStorage.getItem('birdeye_provider')||'anthropic';
+let camActive=false,visionMode='human',uvRaf=null,uploadedB64=null,uploadedMime='image/jpeg';
+
+// ── PROVIDER CONFIG ──
+const PROVIDERS = {
+  gemini: {
+    name: 'Google Gemini',
+    model: 'gemini-2.0-flash',
+    modelLabel: '2.0 Flash',
+    placeholder: 'AIzaSy...',
+    validate: k => k.startsWith('AIza') && k.length > 20,
+    errZh: 'Gemini Key 应以 AIzaSy 开头',
+    errEn: 'Gemini Key should start with AIzaSy',
+    noteZh: '⚠️ 免费额度：每分钟15次，每天1500次。超出会报"quota exceeded"错误。如遇此错误，请切换到 Claude 或 OpenAI。去 aistudio.google.com 获取免费 Key。',
+    noteEn: '⚠️ Free quota: 15 req/min, 1,500/day. Exceeding this causes a "quota exceeded" error. If that happens, switch to Claude or OpenAI. Get a free key at aistudio.google.com',
+    free: true,
+  },
+  anthropic: {
+    name: 'Anthropic Claude',
+    model: 'claude-sonnet-4-20250514',
+    modelLabel: 'Sonnet 4',
+    placeholder: 'sk-ant-api03-...',
+    validate: k => k.startsWith('sk-ant-'),
+    errZh: 'Claude Key 应以 sk-ant- 开头',
+    errEn: 'Claude Key should start with sk-ant-',
+    noteZh: '新用户约有 $5 免费额度。去 console.anthropic.com 获取 Key。',
+    noteEn: 'New users get ~$5 free credit. Get your key at console.anthropic.com',
+    free: false,
+  },
+  openai: {
+    name: 'OpenAI',
+    model: 'gpt-4o-mini',
+    modelLabel: 'GPT-4o mini',
+    placeholder: 'sk-proj-...',
+    validate: k => k.startsWith('sk-'),
+    errZh: 'OpenAI Key 应以 sk- 开头',
+    errEn: 'OpenAI Key should start with sk-',
+    noteZh: '新用户约有 $5 免费额度。去 platform.openai.com 获取 Key。',
+    noteEn: 'New users get ~$5 free credit. Get your key at platform.openai.com',
+    free: false,
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    model: 'deepseek-chat',
+    modelLabel: 'V3',
+    placeholder: 'sk-...',
+    validate: k => k.startsWith('sk-') && k.length > 10,
+    errZh: '⚠ DeepSeek 图片分析能力较弱，建议用 Gemini。Key 应以 sk- 开头。',
+    errEn: '⚠ DeepSeek has limited image analysis. Gemini recommended. Key should start with sk-',
+    noteZh: '⚠ 注意：DeepSeek 对图片的理解能力较弱，AI标注效果可能不如 Gemini。去 platform.deepseek.com 获取 Key。',
+    noteEn: '⚠ Note: DeepSeek has weaker image understanding. AI marking may be less accurate than Gemini. Get key at platform.deepseek.com',
+    free: false,
+  }
+};
+
+function selectProvider(id) {
+  currentProvider = id;
+  localStorage.setItem('birdeye_provider', id);
+  const cfg = PROVIDERS[id];
+  const isZh = currentLang === 'zh';
+
+  // Update button styles
+  ['gemini','anthropic','openai','deepseek'].forEach(p => {
+    const btn = document.getElementById('prov-' + p);
+    if (btn) btn.classList.toggle('selected', p === id);
+  });
+
+  // Update placeholder
+  const inp = document.getElementById('keyInputField');
+  if (inp) { inp.placeholder = cfg.placeholder; inp.value = ''; }
+
+  // Update note
+  const note = document.getElementById('providerNote');
+  if (note) note.textContent = isZh ? cfg.noteZh : cfg.noteEn;
+
+  // Update key note at bottom
+  updateKeyNote();
+  updateKeyUI();
+}
+
+function toggleKeyVisibility() {
+  const inp = document.getElementById('keyInputField');
+  if (inp) inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function updateKeyNote() {
+  const note = document.getElementById('keyNote');
+  if (!note) return;
+  const isZh = currentLang === 'zh';
+  const cfg = PROVIDERS[currentProvider];
+  const links = {
+    gemini: 'https://aistudio.google.com/app/apikey',
+    anthropic: 'https://console.anthropic.com',
+    openai: 'https://platform.openai.com/api-keys',
+    deepseek: 'https://platform.deepseek.com',
+  };
+  const url = links[currentProvider];
+  note.innerHTML = isZh
+    ? `Key 仅保存在你的设备本地，不会上传。<br><a href="${url}" target="_blank" style="color:var(--accent);">→ 去获取 ${cfg.name} Key</a>`
+    : `Your key is stored locally on your device only.<br><a href="${url}" target="_blank" style="color:var(--accent);">→ Get your ${cfg.name} key</a>`;
+}
+
+function t(k){return LANG[currentLang][k]||LANG.zh[k]||k;}
+
+function applyLang(){
+  document.documentElement.lang=currentLang;
+  document.title=t('title_tag');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{const v=t(el.getAttribute('data-i18n'));if(v)el.innerHTML=v;});
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=t(el.getAttribute('data-i18n-placeholder'));});
+  const kn=document.getElementById('keyNote');if(kn)kn.innerHTML=t('key_note');
+  ['zh','en'].forEach(l=>{
+    const b=document.getElementById('lang-'+l);if(!b)return;
+    if(l===currentLang){b.style.border='2px solid var(--accent)';b.style.background='rgba(26,158,143,0.1)';b.style.color='var(--accent)';}
+    else{b.style.border='1px solid var(--border)';b.style.background='var(--surface2)';b.style.color='var(--muted)';}
+  });
+  updateKeyUI();
+  const ph=document.getElementById('camPlaceholder');
+  if(ph){const h=ph.querySelector('h3'),p=ph.querySelector('p');if(h)h.textContent=t('cam_ph_title');if(p)p.textContent=t('cam_ph_desc');}
+  const ivH=document.getElementById('ivHuman'),ivB=document.getElementById('ivBird');
+  if(ivH)ivH.textContent=t('iv_human');if(ivB)ivB.textContent=t('iv_bird');
+  const ba=document.getElementById('btnAnalyze');if(ba)ba.textContent=t('btn_analyze');
+  const pill=document.getElementById('modePill');
+  if(pill&&pill.style.display!=='none'){if(visionMode==='uv')pill.textContent=t('pill_uv');if(visionMode==='bird')pill.textContent=t('pill_bird');}
+  document.body.style.fontFamily="'Outfit','Noto Sans SC',sans-serif";
+}
+
+function setLang(l){currentLang=l;localStorage.setItem('birdeye_lang',l);applyLang();}
+
+// ══ REFS DATA ══
+const REFS = {
+  vision: {
+    zh: { title:'鸟类视觉科研来源', sub:'以下研究支撑了本App的UV视觉与视野模拟' },
+    en: { title:'Bird Vision Research Sources', sub:'Studies supporting the UV vision & field-of-view simulation' },
+    items: [
+      { cat:'UV四色视觉', title:'Ultraviolet vision in birds', authors:'Cuthill et al. (2000) · Advances in the Study of Behavior, Vol.29', url:'https://doi.org/10.1016/S0065-3454(08)60105-9' },
+      { cat:'鸟类视觉系统综述', title:'The phylogenetic distribution of ultraviolet sensitivity in birds', authors:'Ödeen & Håstad (2013) · BMC Evolutionary Biology, 13:36', url:'https://doi.org/10.1186/1471-2148-13-36' },
+      { cat:'双眼视觉区域', title:'What is binocular vision for? A birds\' eye view', authors:'Martin (2009) · Journal of Vision, 9(11)', url:'https://doi.org/10.1167/9.11.14' },
+      { cat:'视野角度研究', title:'Visual fields in Short-toed Eagles and the function of binocularity', authors:'Martin & Katzir (1999) · Brain, Behavior and Evolution, 53(2)', url:'https://doi.org/10.1159/000006582' },
+      { cat:'鸟撞建筑', title:'Bird–building collisions in the United States: estimates of annual mortality', authors:'Loss et al. (2014) · The Condor, 116(1)', url:'https://doi.org/10.1650/CONDOR-13-090.1' },
+      { cat:'建筑设计指南', title:'Bird-Friendly Building Design Guidelines', authors:'American Bird Conservancy (ABC)', url:'https://abcbirds.org/glass-collisions/' },
+    ]
+  },
+  fisheye: {
+    zh: { title:'鸟类全视野模拟依据', sub:'本模拟基于以下视觉生态学研究' },
+    en: { title:'Bird Full Vision Simulation Basis', sub:'This simulation is based on the following visual ecology research' },
+    items: [
+      { cat:'宽视野与盲区', title:'Avian binocular vision: It\'s not just about what birds can see, it\'s also about what they can\'t', authors:'Tyrrell & Fernández-Juricic (2017) · PLOS ONE', url:'https://doi.org/10.1371/journal.pone.0173235' },
+      { cat:'双眼视觉极窄', title:'What is binocular vision for? A birds\' eye view', authors:'Martin (2009) · Journal of Vision, 9(11)', url:'https://doi.org/10.1167/9.11.14' },
+      { cat:'双眼视觉极窄', title:'What is binocular vision for? A birds\' eye view', authors:'Martin (2009) · Journal of Vision, 9(11)', url:'https://doi.org/10.1167/9.11.14' },
+      { cat:'鱼眼畸变模型', title:'Conjugate and disjunctive saccades in two avian species with contrasting oculomotor strategies', authors:'Wallman & Pettigrew (1985) · Journal of Neuroscience, 5(6)', url:'https://doi.org/10.1523/JNEUROSCI.05-06-01418.1985' },
+    ]
+  }
+};
+
+function openRefs(type) {
+  const data = REFS[type];
+  const lang = currentLang;
+  const info = data[lang] || data.zh;
+  document.getElementById('refsModalTitle').textContent = info.title;
+  document.getElementById('refsModalSub').textContent = info.sub;
+  document.getElementById('refsModalNote').textContent =
+    lang === 'en'
+      ? '⚠️ The visual simulations in this app are educational approximations, not precise scientific measurements. Bird vision varies significantly by species.'
+      : '⚠️ 本App的视觉模拟为科普近似演示，非精确科学测量。鸟类视觉因物种差异而有所不同。';
+  document.querySelector('.refs-close').textContent = lang === 'en' ? 'Close' : '关闭';
+
+  const body = document.getElementById('refsModalBody');
+  body.innerHTML = data.items.map(r => `
+    <a class="ref-item" href="${r.url}" target="_blank" rel="noopener">
+      <div class="ref-cat">${r.cat}</div>
+      <div class="ref-title">${r.title}</div>
+      <div class="ref-authors">${r.authors}</div>
+      <div class="ref-link">→ 查看原文 / View Paper</div>
+    </a>`).join('');
+
+  document.getElementById('refsModal').classList.add('open');
+}
+
+function closeRefs() {
+  document.getElementById('refsModal').classList.remove('open');
+}
+
+window.addEventListener('load',()=>{
+  applyLang();
+  selectProvider(currentProvider);
+});
+
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+}
+
+function updateKeyUI(){
+  const has=!!apiKey;
+  const cfg = PROVIDERS[currentProvider];
+  const isZh = currentLang === 'zh';
+  document.getElementById('keyDot').className='key-dot'+(has?' active':'');
+  document.getElementById('ksbDot').className='ksb-dot'+(has?' on':' off');
+  document.getElementById('ksbTitle').textContent = has
+    ? (isZh ? `${cfg.name} Key 已设置 ✓` : `${cfg.name} Key Active ✓`)
+    : (isZh ? '未设置 API Key' : 'No API Key Set');
+  document.getElementById('ksbSub').textContent = has
+    ? (isZh ? `使用 ${cfg.model}` : `Using ${cfg.model}`)
+    : (isZh ? '设置后解锁AI分析功能' : 'Set a key to unlock AI analysis');
+  const bs=document.getElementById('btnSaveKey');
+  if(bs) bs.textContent = isZh ? '保存' : 'Save';
+  const bc=document.getElementById('btnClearKey');
+  if(bc) bc.textContent = isZh ? '清除已保存的 Key' : 'Clear Saved Key';
+  if(has && document.getElementById('keyInputField'))
+    document.getElementById('keyInputField').value='••••••••••••••••';
+
+  // Update provider note
+  const note = document.getElementById('providerNote');
+  if(note) note.textContent = isZh ? cfg.noteZh : cfg.noteEn;
+  updateKeyNote();
+}
+
+function saveKey(){
+  const val=document.getElementById('keyInputField').value.trim();
+  const cfg = PROVIDERS[currentProvider];
+  const isZh = currentLang === 'zh';
+  const errEl = document.getElementById('keyErrMsg');
+
+  if(!cfg.validate(val)){
+    errEl.textContent = isZh ? cfg.errZh : cfg.errEn;
+    errEl.style.display='block';
+    return;
+  }
+  apiKey=val;
+  localStorage.setItem('birdeye_key', apiKey);
+  errEl.style.display='none';
+  updateKeyUI();
+  const btn=document.getElementById('btnSaveKey');
+  btn.textContent = isZh ? '✓ 已保存！' : '✓ Saved!';
+  setTimeout(()=>{ btn.textContent = isZh ? '保存' : 'Save'; }, 1500);
+}
+
+function clearKey(){
+  apiKey='';
+  localStorage.removeItem('birdeye_key');
+  const inp = document.getElementById('keyInputField');
+  if(inp) inp.value='';
+  updateKeyUI();
+}
+
+async function startCamera(){
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}},audio:false});
+    const vid=document.getElementById('videoEl');vid.srcObject=s;await vid.play();
+    camActive=true;
+    document.getElementById('camPlaceholder').style.display='none';
+    document.getElementById('btnStartCam').textContent=t('cam_active');
+    document.getElementById('btnStartCam').disabled=true;
+    document.getElementById('btnAILive').disabled=false;
+    applyVisionMode();
+  }catch(e){alert(t('err_cam')+e.message);}
+}
+
+function setVisionMode(mode){
+  visionMode=mode;
+  ['human','uv','bird'].forEach(m=>document.getElementById('vt-'+m).classList.toggle('vt-active',m===mode));
+  if(camActive)applyVisionMode();
+}
+
+function applyVisionMode(){
+  const vid=document.getElementById('videoEl'),cvs=document.getElementById('uvCanvas'),pill=document.getElementById('modePill');
+  stopUVLoop();
+  if(visionMode==='human'){vid.style.opacity='1';cvs.style.display='none';pill.style.display='none';}
+  else if(visionMode==='uv'){vid.style.opacity='0';cvs.style.display='block';pill.style.display='block';pill.textContent=t('pill_uv');pill.style.color='#7c3abf';startUVLoop(false);}
+  else if(visionMode==='bird'){vid.style.opacity='0';cvs.style.display='block';pill.style.display='block';pill.textContent=t('pill_bird');pill.style.color='#1a9e8f';startUVLoop(true);}
+}
+
+function startUVLoop(birdFull){
+  const vid=document.getElementById('videoEl'),cvs=document.getElementById('uvCanvas'),ctx=cvs.getContext('2d');
+  function frame(){
+    if(!camActive)return;
+    const W=vid.videoWidth||640,H=vid.videoHeight||480;cvs.width=W;cvs.height=H;
+    if(birdFull){drawFisheye(ctx,vid,W,H);applyUVShift(ctx,W,H);drawBinocularMask(ctx,W,H);drawUVVignette(ctx,W,H);}
+    else{ctx.drawImage(vid,0,0);applyUVShift(ctx,W,H);}
+    uvRaf=requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+function drawFisheye(ctx,vid,W,H){
+  const tc=document.createElement('canvas');tc.width=W;tc.height=H;
+  const tCtx=tc.getContext('2d');tCtx.drawImage(vid,0,0);
+  const id=tCtx.getImageData(0,0,W,H),out=ctx.createImageData(W,H),src=id.data,dst=out.data;
+  const cx=W/2,cy=H/2,k=0.35;
+  for(let y=0;y<H;y++){for(let x=0;x<W;x++){
+    const dx=(x-cx)/cx,dy=(y-cy)/cy,r=Math.sqrt(dx*dx+dy*dy),th=Math.atan2(dy,dx),rn=r*(1+k*r*r);
+    const sx=Math.round(cx+rn*Math.cos(th)*cx),sy=Math.round(cy+rn*Math.sin(th)*cy),di=(y*W+x)*4;
+    if(sx>=0&&sx<W&&sy>=0&&sy<H){const si=(sy*W+sx)*4;dst[di]=src[si];dst[di+1]=src[si+1];dst[di+2]=src[si+2];dst[di+3]=255;}
+    else{dst[di]=dst[di+1]=dst[di+2]=0;dst[di+3]=255;}
+  }}
+  ctx.putImageData(out,0,0);
+}
+
+function applyUVShift(ctx,W,H){
+  const id=ctx.getImageData(0,0,W,H),d=id.data;
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];d[i]=Math.min(255,r*.72+b*.12)*.9;d[i+1]=Math.min(255,g*1.4)*.88;d[i+2]=Math.min(255,b*1.45+r*.2)*.94;}
+  ctx.putImageData(id,0,0);
+}
+
+function drawBinocularMask(ctx,W,H){
+  const cw=W*.15,cx=W/2;
+  const gL=ctx.createLinearGradient(0,0,cx-cw,0);gL.addColorStop(0,'rgba(140,199,185,0.6)');gL.addColorStop(1,'rgba(140,199,185,0)');
+  ctx.fillStyle=gL;ctx.fillRect(0,0,cx-cw,H);
+  const gR=ctx.createLinearGradient(W,0,cx+cw,0);gR.addColorStop(0,'rgba(140,199,185,0.6)');gR.addColorStop(1,'rgba(140,199,185,0)');
+  ctx.fillStyle=gR;ctx.fillRect(cx+cw,0,W-cx-cw,H);
+}
+
+function drawUVVignette(ctx,W,H){
+  const g=ctx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.75);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(30,0,60,0.35)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
+function stopUVLoop(){if(uvRaf){cancelAnimationFrame(uvRaf);uvRaf=null;}}
+
+async function analyzeLive(){
+  if(!camActive)return;
+  if(!apiKey){showLiveResult(currentLang==='zh'?'⚠️ 请在「设置」页面输入 API Key':'⚠️ Please add an API Key in Settings');return;}
+  const vid=document.getElementById('videoEl');
+  const snap=document.createElement('canvas');snap.width=vid.videoWidth||640;snap.height=vid.videoHeight||480;
+  snap.getContext('2d').drawImage(vid,0,0);
+  const b64=snap.toDataURL('image/jpeg',.85).split(',')[1];
+  document.getElementById('dangerOverlay').style.display='block';
+  document.getElementById('dangerOverlay').innerHTML=`<div class="scan-overlay"><div class="scan-box"><div class="thinkdot"></div><div class="thinkdot"></div><div class="thinkdot"></div><span style="margin-left:8px;">${t('scan_analyzing')}</span></div></div>`;
+  await callAI(b64,true);
+}
+
+function showLiveDangerBoxes(zones){
+  const ov=document.getElementById('dangerOverlay');ov.style.display='block';
+  if(!zones||!zones.length){ov.innerHTML='';return;}
+  ov.innerHTML=zones.map(z=>`<div class="d-box ${z.level}" style="top:${z.top}%;left:${z.left}%;width:${z.width}%;height:${z.height}%;"><div class="d-label">${z.label}</div></div>`).join('');
+}
+
+function showLiveResult(msg){
+  const s=document.getElementById('liveResultStrip');s.innerHTML=msg;s.style.display='block';
+  clearTimeout(s._t);s._t=setTimeout(()=>{s.style.display='none';},6000);
+}
+
+function handleFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const src=ev.target.result;
+    // Re-encode via canvas to guarantee valid JPEG for Claude API
+    const img=new Image();
+    img.onload=()=>{
+      const cvs=document.createElement('canvas');
+      cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;
+      cvs.getContext('2d').drawImage(img,0,0);
+      const jpegDataUrl=cvs.toDataURL('image/jpeg',0.92);
+      uploadedB64=jpegDataUrl.split(',')[1];
+      uploadedMime='image/jpeg';
+      document.getElementById('previewImg').src=src;document.getElementById('previewImg').style.display='block';
+      document.getElementById('uploadPh').style.display='none';document.getElementById('uploadDrop').classList.add('has-img');
+      document.getElementById('uvPreview').src=src;
+      const ic=document.getElementById('imgControls');ic.style.display='flex';
+      document.getElementById('btnAnalyze').disabled=false;document.getElementById('resultCard').style.display='none';
+      document.getElementById('ivHuman').textContent=t('iv_human');document.getElementById('ivBird').textContent=t('iv_bird');
+      document.getElementById('btnAnalyze').textContent=t('btn_analyze');
+    };
+    img.src=src;
+  };
+  reader.readAsDataURL(file);
+}
+
+function setImgMode(mode){
+  const img=document.getElementById('uvPreview'),badge=document.getElementById('imgBadge');
+  document.getElementById('ivHuman').className='vt-btn'+(mode==='human'?' vt-on':'');
+  document.getElementById('ivBird').className='vt-btn'+(mode==='bird'?' vt-on':'');
+  img.className=mode==='bird'?'uv-on':'';
+  badge.textContent=mode==='bird'?t('img_badge_bird'):t('img_badge_human');
+  badge.style.color=mode==='bird'?'#7c3abf':'#14302b';
+}
+
+async function analyzeImage(){
+  if(!uploadedB64)return;
+  if(!apiKey){
+    document.getElementById('resultCard').style.display='block';
+    document.getElementById('rcDot').className='rc-dot err';document.getElementById('rcTitle').textContent=currentLang==='zh'?'需要 API Key':'API Key Required';
+    const b=document.getElementById('rcBody');b.className='rc-body filled';
+    b.innerHTML=`<div style="color:var(--warn);">${currentLang==='zh'?'请在设置页面输入 API Key':'Please add an API Key in Settings'}<br><br><span style="color:var(--muted);">${currentLang==='zh'?'不设置Key也可以使用UV视角功能':'UV vision works without a key'}</span></div>`;return;
+  }
+  document.getElementById('resultCard').style.display='block';document.getElementById('rcDot').className='rc-dot running';
+  document.getElementById('rcTitle').textContent=t('rc_analyzing');document.getElementById('rcBody').className='rc-body';
+  document.getElementById('rcBody').innerHTML='<div class="thinkdots"><div class="thinkdot"></div><div class="thinkdot"></div><div class="thinkdot"></div></div>';
+  await callAI(uploadedB64,false);
+}
+
+function isQuotaError(msg){
+  return /quota|rate.?limit|429|exceeded.*quota|resource.*exhausted/i.test(msg);
+}
+
+function quotaErrorHTML(isZh, providerName, errMsg){
+  const switchLabel = isZh ? '切换服务商' : 'Switch Provider';
+  const title = isZh ? `❌ ${providerName} 配额已用尽` : `❌ ${providerName} Quota Exceeded`;
+  const hint = isZh
+    ? '你的免费额度已用完。请切换到其他服务商（如 Claude 或 OpenAI），或等待配额刷新。'
+    : 'Your free quota is exhausted. Switch to another provider (e.g. Claude or OpenAI), or wait for the quota to reset.';
+  return `<div style="color:var(--danger);font-weight:700;margin-bottom:6px;">${title}</div>
+    <div style="color:var(--muted);font-size:11px;line-height:1.6;margin-bottom:10px;">${hint}</div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;word-break:break-all;">${errMsg}</div>
+    <button onclick="goPage('key')" style="width:100%;padding:10px;background:linear-gradient(135deg,var(--accent),var(--purple));border:none;border-radius:8px;color:#fff;font-family:'Outfit',sans-serif;font-size:12px;font-weight:800;cursor:pointer;">⚙️ ${switchLabel}</button>`;
+}
+
+async function callAIOnce(b64, prompt, mime){
+  const cfg = PROVIDERS[currentProvider];
+  let text = '';
+  if(currentProvider==='gemini'){
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${apiKey}`;
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],generationConfig:{maxOutputTokens:1000}})});
+    const d=await r.json();
+    if(d.error){ const e=new Error(d.error.message); e.status=r.status||d.error.code; throw e; }
+    text=d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  } else if(currentProvider==='openai'){
+    const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:'user',content:[
+        {type:'image_url',image_url:{url:`data:${mime};base64,${b64}`}},{type:'text',text:prompt}]}]})});
+    const d=await r.json();
+    if(d.error){ const e=new Error(d.error.message); e.status=r.status; throw e; }
+    text=d.choices?.[0]?.message?.content||'';
+  } else if(currentProvider==='deepseek'){
+    const r=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},
+      body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:'user',content:[
+        {type:'image_url',image_url:{url:`data:${mime};base64,${b64}`}},{type:'text',text:prompt}]}]})});
+    const d=await r.json();
+    if(d.error){ const e=new Error(d.error.message); e.status=r.status; throw e; }
+    text=d.choices?.[0]?.message?.content||'';
+  } else {
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:cfg.model,max_tokens:1000,messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}]}]})});
+    const d=await r.json();
+    if(d.error){ const e=new Error(d.error.message); e.status=r.status; throw e; }
+    text=(d.content?.[0]?.text||'').trim();
+  }
+  return text;
+}
+
+async function callAI(b64,isLive){
+  const isZh=currentLang==='zh';
+  const cfg=PROVIDERS[currentProvider];
+  const livePrompt=`You are a bird-friendly architecture AI. Analyze the image for bird collision hazards. Return ONLY JSON: {"rating":"${isZh?'友好|中等风险|高危':'Friendly|Medium Risk|High Risk'}","summary":"${isZh?'20字内':'under 15 words'}","zones":[{"label":"⚠ label","level":"danger|warn|safe","top":10,"left":20,"width":40,"height":50}]}. Zones as % of image. Empty zones=[] if safe. ${isZh?'Labels in Chinese.':'Labels in English.'}`;
+  const uploadPrompt=isZh?`你是专业的鸟类友好建筑分析AI，用中文回复（不要Markdown）：\n评级：[友好/中等风险/高危]\n总结：（30字内）\n危险区域：\n- 区域：原因\n安全设计：\n- 元素：原因\n改进建议：\n- 建议`:`You are a bird-friendly architecture AI. Reply in English (no Markdown):\nRating: [Friendly/Medium Risk/High Risk]\nSummary: (max 20 words)\nHazard Zones:\n- zone: reason\nSafe Design:\n- element: reason\nImprovements:\n- suggestion`;
+  const prompt=isLive?livePrompt:uploadPrompt;
+  const mime=uploadedMime||'image/jpeg';
+
+  // Retry logic: up to 2 retries for rate-limit/transient errors
+  const MAX_RETRIES = 2;
+  let lastErr = null;
+  for(let attempt=0; attempt<=MAX_RETRIES; attempt++){
+    try{
+      if(attempt > 0){
+        // Exponential backoff: 2s, 4s
+        const waitMs = attempt * 2000;
+        const retryMsg = isZh ? `⏳ 请求限流，${attempt*2}秒后重试 (${attempt}/${MAX_RETRIES})…` : `⏳ Rate limited, retrying in ${attempt*2}s (${attempt}/${MAX_RETRIES})…`;
+        if(isLive){ showLiveResult(retryMsg); }
+        else{
+          const b=document.getElementById('rcBody');
+          b.innerHTML=`<div style="color:var(--warn);font-size:12px;">${retryMsg}</div>`;
+        }
+        await new Promise(res=>setTimeout(res,waitMs));
+      }
+      const text = await callAIOnce(b64, prompt, mime);
+      if(isLive){
+        try{const p=JSON.parse(text.replace(/```json|```/g,'').trim());
+          showLiveDangerBoxes(p.zones||[]);
+          const ic=/高危|High/.test(p.rating)?'🚨':/友好|Friendly/.test(p.rating)?'✅':'⚠️';
+          showLiveResult(`${ic} <strong>${p.rating||''}</strong> — ${p.summary||''}`);
+        }catch{showLiveDangerBoxes([]);showLiveResult(isZh?'✓ 未检测到明显危险区域':'✓ No significant hazards detected');}
+      } else { renderUploadResult(text); }
+      return; // success
+    } catch(err){
+      lastErr = err;
+      // If quota error, don't retry — it won't help
+      if(isQuotaError(err.message)) break;
+      // If last attempt, fall through to error display
+      if(attempt < MAX_RETRIES) continue;
+    }
+  }
+
+  // Error display
+  const errMsg = lastErr?.message || (isZh?'请检查API Key':'Please check your API Key');
+  const provName = cfg.name;
+  if(isLive){
+    document.getElementById('dangerOverlay').innerHTML='';
+    if(isQuotaError(errMsg)){
+      showLiveResult(`❌ ${isZh?`${provName}配额已用尽，请在设置页切换服务商`:`${provName} quota exceeded — switch provider in Settings`}`);
+    } else {
+      showLiveResult('❌ '+(isZh?'连接失败：':'Connection failed: ')+errMsg);
+    }
+  } else {
+    document.getElementById('rcDot').className='rc-dot err';
+    document.getElementById('rcTitle').textContent=isZh?'分析失败':'Analysis Failed';
+    const b=document.getElementById('rcBody');b.className='rc-body filled';
+    if(isQuotaError(errMsg)){
+      b.innerHTML=quotaErrorHTML(isZh, provName, errMsg);
+    } else {
+      const msg=(isZh?'连接失败：':'Connection failed: ')+errMsg;
+      b.innerHTML=`<div style="color:var(--danger);">${msg}</div>`;
+    }
+  }
+}
+
+function renderUploadResult(text){
+  const isZh=currentLang==='zh';
+  const rm=text.match(isZh?/评级[：:]\s*([^\n]+)/:/Rating[:\s]+([^\n]+)/i);
+  const rating=rm?rm[1].trim():'';
+  let rc='arb-warn',ri='⚠️';
+  if(/高危|High Risk/i.test(rating)){rc='arb-danger';ri='🚨';}
+  else if(/友好|Friendly/i.test(rating)&&!/不|not/i.test(rating)){rc='arb-safe';ri='✅';}
+  const lines=text.split('\n').filter(l=>l.trim());
+  let html=`<div class="ai-rating-badge ${rc}">${ri} ${rating}</div>`,sec='';
+  for(const line of lines){
+    if(/^(评级|Rating)/i.test(line))continue;
+    if(/^(总结|Summary)/i.test(line)){html+=`<div class="ai-item"><span class="ai-item-icon">📋</span><span style="color:var(--muted);">${line.replace(/^(总结|Summary)[：:\s]*/i,'')}</span></div>`;}
+    else if(/危险区域|Hazard|安全设计|Safe Design|改进建议|Improvements/i.test(line)){
+      const col=/危险|Hazard/i.test(line)?'var(--danger)':/安全|Safe/i.test(line)?'var(--green)':'var(--accent)';
+      const ico=/危险|Hazard/i.test(line)?'⚠️':/安全|Safe/i.test(line)?'✅':'💡';
+      html+=`<div class="ai-section-head" style="color:${col};">${ico} ${line.replace(/[：:]/,'').trim()}</div>`;sec=line;
+    }else if(line.startsWith('-')){
+      const ico=/危险|Hazard|glass/i.test(sec+line)?'🔴':/安全|Safe|plant/i.test(sec+line)?'🟢':'🔵';
+      html+=`<div class="ai-item"><span class="ai-item-icon">${ico}</span><span>${line.slice(1).trim()}</span></div>`;
+    }
+  }
+  document.getElementById('rcDot').className='rc-dot done';document.getElementById('rcTitle').textContent=t('rc_done');
+  const b=document.getElementById('rcBody');b.className='rc-body filled';b.innerHTML=html;
+}
+</script>
+</body>
+</html>
