@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BirdEye — Collision Risk Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --teal-50:#F1F8F5; --teal-100:#DEEFE9; --teal-200:#BFE0D6;
+  --teal-300:#8CC7B9; --teal-400:#5EAB9A; --teal-500:#3E8576;
+  --teal-600:#2F6B5E; --teal-700:#234D43; --teal-800:#193831;
+  --ink:#15201C; --ink-2:#3A4742; --ink-3:#6B7872; --ink-4:#9AA6A0;
+  --line:#E3E8E5; --line-2:#EEF1EF; --paper:#FFFFFF;
+  --bg:#EBEEEC; --bg-2:#F6F8F7;
+  --sev-low:oklch(0.68 0.11 162); --sev-low-bg:oklch(0.95 0.04 162);
+  --sev-mod:oklch(0.72 0.13 82);  --sev-mod-bg:oklch(0.96 0.05 82);
+  --sev-high:oklch(0.64 0.16 46); --sev-high-bg:oklch(0.95 0.06 46);
+  --sev-sev:oklch(0.55 0.20 25);  --sev-sev-bg:oklch(0.95 0.05 25);
+  --danger:#e03030; --warn:#c97a0a; --green:#2db87a;
+  --r-sm:7px; --r-md:11px; --r-lg:16px;
+  --shadow-card:0 1px 2px rgba(21,32,28,.04),0 4px 16px rgba(21,32,28,.05);
+  --nav-h:62px; --header-h:54px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Outfit','Noto Sans SC',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;}
+
+/* SHELL */
+.app-shell{display:flex;flex-direction:column;height:100vh;width:100%;}
+
+/* HEADER */
+.app-header{height:var(--header-h);flex-shrink:0;display:flex;align-items:center;padding:0 16px;gap:10px;background:var(--paper);border-bottom:1px solid var(--line);position:relative;z-index:20;}
+.brand-mark{width:30px;height:30px;flex-shrink:0;border-radius:8px;background:var(--teal-700);display:flex;align-items:center;justify-content:center;}
+.brand-mark svg{width:18px;height:18px;}
+.brand-name{font-weight:700;font-size:16px;letter-spacing:-.01em;color:var(--ink);}
+.brand-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink-4);letter-spacing:.08em;margin-top:2px;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px;}
+.top-nav{display:none;gap:2px;}
+.top-nav-btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border:none;background:none;cursor:pointer;border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:500;color:var(--ink-3);transition:all .15s;}
+.top-nav-btn:hover{background:var(--bg-2);color:var(--ink);}
+.top-nav-btn.active{background:var(--teal-50);color:var(--teal-700);}
+.top-nav-btn svg{width:16px;height:16px;}
+.key-chip{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg-2);border:1px solid var(--line);border-radius:6px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;color:var(--ink-3);cursor:pointer;transition:all .2s;}
+.key-chip:hover{border-color:var(--teal-400);color:var(--teal-600);}
+.key-dot{width:6px;height:6px;border-radius:50%;background:var(--danger);flex-shrink:0;transition:background .3s;}
+.key-dot.active{background:var(--green);box-shadow:0 0 6px var(--green);}
+
+/* MAIN */
+.main-area{flex:1;overflow:hidden;position:relative;display:flex;}
+
+/* PAGES */
+.page{position:absolute;inset:0;display:none;flex-direction:column;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.page.active{display:flex;}
+
+/* BOTTOM NAV */
+.bottom-nav{height:var(--nav-h);flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);border-top:1px solid var(--line);position:relative;z-index:20;padding-bottom:env(safe-area-inset-bottom,0px);}
+.nav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:none;background:transparent;cursor:pointer;color:var(--ink-4);position:relative;}
+.nav-btn svg{width:21px;height:21px;transition:transform .2s;}
+.nav-btn span{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-transform:uppercase;transition:color .2s;}
+.nav-btn.active{color:var(--teal-700);}
+.nav-btn.active svg{transform:scale(1.12);}
+.nav-btn.active::after{content:'';position:absolute;top:0;left:20%;right:20%;height:2px;background:var(--teal-600);border-radius:0 0 3px 3px;}
+
+/* DESKTOP */
+@media(min-width:1024px){
+  .bottom-nav{display:none;}
+  .top-nav{display:flex;}
+  .main-area{flex-direction:row;}
+  .page{position:relative;flex:1;}
+  .page.active{display:flex;}
+  #page-analyse.active{flex-direction:row;overflow:hidden;}
+  .analyse-left{flex:0 0 50%;max-width:50%;overflow-y:auto;padding:20px 20px 32px;border-right:1px solid var(--line);}
+  .analyse-right{flex:1;overflow-y:auto;padding:20px 20px 32px;}
+  #page-guide,#page-settings{max-width:720px;margin:0 auto;width:100%;}
+}
+@media(min-width:768px) and (max-width:1023px){
+  .bottom-nav{display:none;}
+  .top-nav{display:flex;}
+}
+
+/* COMMON */
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-4);display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--line);}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-card);}
+.seg{display:flex;background:var(--bg-2);border:1px solid var(--line);border-radius:var(--r-md);padding:3px;gap:2px;}
+.seg button{flex:1;border:none;background:none;cursor:pointer;font-family:'Outfit',sans-serif;font-weight:500;font-size:13px;color:var(--ink-3);padding:9px 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;transition:.15s;}
+.seg button.on{background:var(--paper);color:var(--ink);box-shadow:0 1px 3px rgba(21,32,28,.1);}
+.seg button svg{width:15px;height:15px;}
+.btn{font-family:'Outfit',sans-serif;font-weight:600;font-size:14px;border:none;border-radius:var(--r-md);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .08s,opacity .15s;}
+.btn:active{transform:scale(.985);}
+.btn-primary{background:var(--teal-700);color:#fff;padding:14px;width:100%;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.fade-in{animation:fadeIn .35s ease both;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ANALYSE PAGE */
+.analyse-left,.mobile-wrap{padding:14px 16px 24px;display:flex;flex-direction:column;gap:14px;}
+
+/* VIEWPORT */
+.viewport-wrap{position:relative;width:100%;aspect-ratio:4/3;background:#1a2421;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--line);}
+@media(min-width:1024px){.viewport-wrap{aspect-ratio:16/10;}}
+.viewport-wrap video,.viewport-wrap canvas,.viewport-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+.viewport-wrap canvas{display:none;}
+.cam-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--bg-2);}
+.cam-placeholder svg{width:40px;height:40px;color:var(--ink-4);opacity:.4;}
+.cam-placeholder h3{font-size:15px;font-weight:600;color:var(--ink-2);}
+.cam-placeholder p{font-size:12px;color:var(--ink-4);text-align:center;padding:0 24px;line-height:1.6;}
+.upload-empty{position:relative;width:100%;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;border:2px dashed var(--teal-200);border-radius:var(--r-lg);background:var(--bg-2);cursor:pointer;text-align:center;padding:24px;}
+.upload-empty input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{width:52px;height:52px;border-radius:14px;background:var(--teal-100);display:flex;align-items:center;justify-content:center;color:var(--teal-600);}
+.upload-icon svg{width:24px;height:24px;}
+.upload-title{font-size:15px;font-weight:600;color:var(--ink);}
+.upload-sub{font-size:12px;color:var(--ink-3);margin-top:2px;line-height:1.5;}
+.mode-chip{position:absolute;top:10px;left:10px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;color:#fff;background:rgba(15,25,22,.6);backdrop-filter:blur(4px);padding:4px 8px;border-radius:5px;pointer-events:none;}
+.sim-chip{position:absolute;top:10px;right:10px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;color:#fff;background:rgba(180,90,40,.75);padding:4px 7px;border-radius:5px;pointer-events:none;display:none;}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:var(--teal-300);box-shadow:0 0 14px 3px var(--teal-300);display:none;pointer-events:none;}
+.scan-text-bar{position:absolute;bottom:12px;left:10px;right:10px;display:none;justify-content:space-between;font-family:'DM Mono',monospace;font-size:10px;color:#fff;letter-spacing:.04em;}
+.scan-fade{position:absolute;left:0;right:0;top:0;background:linear-gradient(180deg,rgba(140,199,185,.10),transparent);display:none;pointer-events:none;}
+#dangerOverlay{position:absolute;inset:0;pointer-events:none;}
+.d-box{position:absolute;border:1.5px solid;border-radius:3px;}
+.d-box.danger{border-color:var(--danger);}
+.d-box.warn{border-color:var(--warn);}
+.d-box.safe{border-color:var(--green);}
+.d-lbl{position:absolute;top:-18px;left:0;font-family:'DM Mono',monospace;font-size:9px;padding:2px 5px;border-radius:3px 3px 3px 0;letter-spacing:.04em;white-space:nowrap;color:#fff;line-height:1;}
+.d-box.danger .d-lbl{background:var(--danger);}
+.d-box.warn   .d-lbl{background:var(--warn);}
+.d-box.safe   .d-lbl{background:var(--green);}
+#liveStrip{position:absolute;bottom:10px;left:10px;right:10px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border:1px solid rgba(0,0,0,.08);border-radius:10px;padding:9px 13px;font-size:12px;line-height:1.5;display:none;}
+
+/* BANNER */
+.banner{display:flex;align-items:center;gap:9px;padding:10px 13px;background:oklch(0.96 0.05 82);border:1px solid oklch(0.85 0.08 82);border-radius:var(--r-md);font-size:12px;color:var(--ink-2);}
+.banner svg{width:15px;height:15px;flex-shrink:0;color:var(--warn);}
+.banner a{color:var(--teal-600);font-weight:600;cursor:pointer;text-decoration:none;}
+
+/* VISION */
+.vision-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.vbtn{border:1.5px solid var(--line);background:var(--paper);border-radius:var(--r-md);padding:11px 8px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;transition:.15s;text-align:center;}
+.vbtn.on{border-color:var(--teal-400);background:var(--teal-50);}
+.vbtn svg{width:20px;height:20px;color:var(--ink-3);}
+.vbtn.on svg{color:var(--teal-600);}
+.vbtn .vbl{font-size:12px;font-weight:600;color:var(--ink-2);line-height:1.1;}
+.vbtn.on .vbl{color:var(--teal-700);}
+.vbtn .vband{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--ink-4);letter-spacing:.02em;}
+.vision-note{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-3);line-height:1.5;letter-spacing:.01em;background:var(--bg-2);border:1px solid var(--line-2);padding:9px 11px;border-radius:8px;}
+
+/* RESULT */
+.result-area{display:flex;flex-direction:column;gap:14px;}
+.r-overall{padding:16px;}
+.r-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;}
+.r-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-4);letter-spacing:.1em;text-transform:uppercase;}
+.r-val{font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1.1;margin-top:5px;}
+.r-ti{font-family:'DM Mono',monospace;font-size:24px;font-weight:500;color:var(--ink);line-height:1.1;margin-top:5px;text-align:right;}
+.r-ti span{font-size:13px;color:var(--ink-4);}
+.sev-meter{display:flex;gap:4px;width:100%;}
+.sev-bar{flex:1;height:6px;border-radius:3px;background:var(--line);transition:background .3s;}
+.r-tags{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;}
+.r-tag{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-3);background:var(--bg-2);border:1px solid var(--line);padding:4px 8px;border-radius:6px;letter-spacing:.04em;}
+.detail-card{padding:14px;}
+.ai-item{display:flex;gap:7px;margin-bottom:5px;font-size:12px;line-height:1.6;align-items:flex-start;}
+.ai-item span{flex-shrink:0;}
+.ai-sec{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;margin:12px 0 6px;display:flex;align-items:center;gap:5px;}
+
+/* THINKING */
+.thinkdots{display:flex;gap:5px;align-items:center;}
+.thinkdot{width:6px;height:6px;border-radius:50%;background:var(--warn);animation:thinking 1.2s ease-in-out infinite;}
+.thinkdot:nth-child(2){animation-delay:.2s;}
+.thinkdot:nth-child(3){animation-delay:.4s;}
+@keyframes thinking{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+
+/* NO RESULT */
+.no-result-hint{text-align:center;padding:32px 20px 8px;}
+.no-result-hint h3{font-size:14px;font-weight:600;color:var(--ink-2);}
+.no-result-hint p{font-size:12px;color:var(--ink-4);margin-top:4px;line-height:1.5;}
+
+/* GUIDE */
+#page-guide{padding:16px 16px 32px;gap:22px;}
+.guide-intro{font-size:13px;color:var(--ink-3);line-height:1.5;margin-top:-4px;}
+.compare-head{display:grid;grid-template-columns:1.25fr 1fr 1fr;background:var(--bg-2);border-bottom:1px solid var(--line);}
+.compare-head div{padding:10px 13px;font-family:'DM Mono',monospace;font-size:9.5px;color:var(--ink-4);letter-spacing:.08em;text-transform:uppercase;}
+.compare-head .hcol{text-align:center;}
+.compare-head .bcol{color:var(--teal-700);background:var(--teal-50);text-align:center;}
+.compare-row{display:grid;grid-template-columns:1.25fr 1fr 1fr;align-items:center;}
+.compare-row:not(:last-child){border-bottom:1px solid var(--line-2);}
+.cr-label{padding:11px 13px;font-size:12.5px;font-weight:500;color:var(--ink);}
+.cr-human{padding:11px 8px;font-family:'DM Mono',monospace;font-size:11.5px;color:var(--ink-3);text-align:center;}
+.cr-bird{padding:11px 8px;font-family:'DM Mono',monospace;font-size:11.5px;color:var(--teal-700);font-weight:500;text-align:center;background:var(--teal-50);}
+.gloss-card{padding:14px;display:flex;gap:12px;align-items:flex-start;}
+.gloss-icon{width:30px;height:30px;flex-shrink:0;border-radius:8px;background:var(--teal-100);color:var(--teal-700);display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;}
+.gloss-name{font-size:14.5px;font-weight:600;color:var(--ink);}
+.gloss-def{font-size:12.5px;color:var(--ink-3);line-height:1.55;margin-top:4px;}
+.ref-item{padding:12px 14px;display:flex;gap:11px;align-items:baseline;}
+.ref-item:not(:last-child){border-bottom:1px solid var(--line-2);}
+.ref-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-4);flex-shrink:0;width:28px;}
+.ref-title{font-size:13px;font-weight:500;color:var(--ink);line-height:1.35;}
+.ref-src{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-4);margin-top:3px;letter-spacing:.02em;}
+
+/* SETTINGS */
+#page-settings{padding:16px 16px 40px;gap:22px;}
+.prov-item{width:100%;border:none;background:var(--paper);cursor:pointer;padding:13px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;transition:background .15s;}
+.prov-item:not(:last-child){border-bottom:1px solid var(--line-2);}
+.prov-item.on{background:var(--teal-50);}
+.prov-name{font-size:14px;font-weight:500;color:var(--ink);}
+.prov-item.on .prov-name{font-weight:600;color:var(--teal-800);}
+.prov-model{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-4);margin-top:3px;letter-spacing:.02em;}
+.prov-free{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.08em;padding:2px 6px;border-radius:4px;font-weight:600;background:rgba(45,184,122,.15);color:var(--green);border:1px solid rgba(45,184,122,.3);}
+.radio-dot{width:19px;height:19px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--line);background:transparent;display:flex;align-items:center;justify-content:center;}
+.prov-item.on .radio-dot{border-color:var(--teal-500);background:var(--teal-500);}
+.radio-dot svg{width:12px;height:12px;color:#fff;}
+.key-wrap{position:relative;}
+.key-input{width:100%;padding:13px 48px 13px 38px;border:1px solid var(--line);border-radius:var(--r-md);background:var(--paper);color:var(--ink);font-family:'DM Mono',monospace;font-size:13px;letter-spacing:.04em;outline:none;transition:border-color .2s;}
+.key-input:focus{border-color:var(--teal-400);}
+.key-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--ink-4);}
+.key-icon svg{width:17px;height:17px;}
+.key-toggle{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:10px;color:var(--teal-600);letter-spacing:.04em;text-transform:uppercase;}
+.ksb{display:flex;align-items:center;gap:10px;padding:14px 16px;}
+.ksb-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--danger);transition:all .3s;}
+.ksb-dot.on{background:var(--green);box-shadow:0 0 8px var(--green);}
+.ksb-label{font-size:13px;font-weight:600;color:var(--ink);}
+.ksb-sub{font-size:11px;color:var(--ink-3);margin-top:1px;}
+.prov-note{margin-top:8px;padding:8px 10px;background:var(--bg-2);border-radius:8px;font-size:11px;color:var(--ink-3);line-height:1.5;}
+.about-card{padding:16px;display:flex;align-items:center;gap:13px;}
+.about-av{width:38px;height:38px;flex-shrink:0;border-radius:10px;background:var(--teal-700);display:flex;align-items:center;justify-content:center;}
+.about-av svg{width:22px;height:22px;}
+
+/* REFS MODAL */
+.refs-modal{display:none;position:fixed;inset:0;z-index:999;background:rgba(20,48,43,.65);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center;}
+.refs-modal.open{display:flex;}
+.refs-sheet{background:var(--paper);border-radius:20px 20px 0 0;padding:20px 20px 40px;width:100%;max-width:520px;max-height:80vh;overflow-y:auto;animation:sheetUp .3s ease;}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.refs-handle{width:36px;height:4px;background:var(--line);border-radius:2px;margin:0 auto 16px;}
+.ref-card{background:var(--bg-2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;text-decoration:none;display:block;}
+.ref-cat{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal-600);margin-bottom:4px;}
+.ref-rtitle{font-size:12px;font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:3px;}
+.ref-rauth{font-size:10px;color:var(--ink-3);}
+.refs-note{font-size:10px;color:var(--ink-3);line-height:1.6;margin-top:12px;padding:10px 12px;background:var(--bg-2);border-radius:8px;border-left:3px solid var(--warn);}
+.refs-close{width:100%;padding:12px;background:var(--bg-2);border:1px solid var(--line);border-radius:10px;color:var(--ink-3);font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;}
+
+@media(min-width:1024px){
+  .refs-modal{align-items:center;}
+  .refs-sheet{border-radius:16px;margin-bottom:0;}
+}
+</style>
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="brand-mark">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M4 16s5-8 12-8 12 8 12 8-5 8-12 8S4 16 4 16z" stroke="#8CC7B9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="16" cy="16" r="3.5" fill="#8CC7B9"/>
+        <circle cx="16" cy="16" r="1.4" fill="#193831"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">BirdEye</div>
+      <div class="brand-sub" id="brandSub">COLLISION RISK · v4.0</div>
+    </div>
+    <nav class="top-nav" id="topNav">
+      <button class="top-nav-btn active" id="tnav-analyse" onclick="goPage('analyse')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>
+        <span id="tl-analyse">Analyse</span>
+      </button>
+      <button class="top-nav-btn" id="tnav-guide" onclick="goPage('guide')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        <span id="tl-guide">Guide</span>
+      </button>
+      <button class="top-nav-btn" id="tnav-settings" onclick="goPage('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10"/><circle cx="17" cy="8" r="2.4"/><path d="M20 16H10"/><circle cx="7" cy="16" r="2.4"/></svg>
+        <span id="tl-settings">Settings</span>
+      </button>
+    </nav>
+    <div class="header-right">
+      <div class="key-chip" onclick="goPage('settings')">
+        <div class="key-dot" id="keyDot"></div>
+        <span>API KEY</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN AREA -->
+  <div class="main-area">
+
+    <!-- PAGE: ANALYSE -->
+    <div class="page active" id="page-analyse">
+      <div class="analyse-left" id="analyseLeft">
+
+        <!-- mode toggle -->
+        <div class="seg" id="modeSeg">
+          <button class="on" id="modeCamera" onclick="setMode('camera')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A1.5 1.5 0 014.5 7h2L8 5h8l1.5 2h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.2"/></svg>
+            <span id="lbl-cam">Camera</span>
+          </button>
+          <button id="modeUpload" onclick="setMode('upload')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5"/><path d="M8 9l4-4 4 4"/><path d="M5 19h14"/></svg>
+            <span id="lbl-upload">Upload</span>
+          </button>
+        </div>
+
+        <!-- camera view -->
+        <div id="cameraView">
+          <div class="viewport-wrap" id="camWrap">
+            <div class="cam-placeholder" id="camPh">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M3 8.5A1.5 1.5 0 014.5 7h2L8 5h8l1.5 2h2A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.2"/></svg>
+              <h3 id="phTitle">Live Bird Eye View</h3>
+              <p id="phDesc">Open camera to simulate bird vision and mark glass hazards with AI</p>
+            </div>
+            <video id="videoEl" autoplay playsinline muted></video>
+            <canvas id="uvCanvas"></canvas>
+            <div class="mode-chip" id="modeChip" style="display:none;">HUMAN · 400–700 nm</div>
+            <div class="sim-chip" id="simChip">SIM FEED</div>
+            <div class="scan-line" id="scanLine"></div>
+            <div class="scan-text-bar" id="scanTxt"></div>
+            <div class="scan-fade" id="scanFade"></div>
+            <div id="dangerOverlay"></div>
+            <div id="liveStrip"></div>
+          </div>
+        </div>
+
+        <!-- upload view -->
+        <div id="uploadView" style="display:none;">
+          <div class="upload-empty" id="uploadEmpty">
+            <input type="file" accept="image/*" id="fileInput" onchange="handleFile(event)">
+            <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 16V5"/><path d="M8 9l4-4 4 4"/><path d="M5 19h14"/></svg></div>
+            <div>
+              <div class="upload-title" id="upTitle">Upload a render or photo</div>
+              <div class="upload-sub" id="upSub">Facade elevation, photograph, or visualisation</div>
+            </div>
+          </div>
+          <div class="viewport-wrap" id="upPreviewWrap" style="display:none;">
+            <img id="upPreviewImg" alt="facade">
+            <div class="mode-chip" id="imgChip">HUMAN · 400–700 nm</div>
+            <div id="upDangerOverlay" style="position:absolute;inset:0;pointer-events:none;"></div>
+          </div>
+        </div>
+
+        <!-- banners -->
+        <div id="camBlockBanner" class="banner" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 4l9 16H3z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg>
+          <span id="camBlockText">Camera unavailable — showing simulated facade</span>
+        </div>
+        <div id="noKeyBanner" class="banner" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 4l9 16H3z"/><path d="M12 10v5"/><path d="M12 18h.01"/></svg>
+          <span id="noKeyText">No API key — <a onclick="goPage('settings')">add one in Settings</a></span>
+        </div>
+
+        <!-- vision selector -->
+        <div>
+          <div class="section-label"><span id="lbl-vision">Vision mode</span></div>
+          <div class="vision-grid">
+            <button class="vbtn on" id="vb-human" onclick="setVision('human')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.6"/></svg>
+              <span class="vbl" id="vbl-human">Human</span>
+              <span class="vband">400–700 nm</span>
+            </button>
+            <button class="vbtn" id="vb-uv" onclick="setVision('uv')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></svg>
+              <span class="vbl" id="vbl-uv">Bird UV</span>
+              <span class="vband">300–400 nm</span>
+            </button>
+            <button class="vbtn" id="vb-full" onclick="setVision('full')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 12c-5 0-9 2.2-9 5h18c0-2.8-4-5-9-5z"/><path d="M3 9.5C5.5 7 8.5 6 12 6s6.5 1 9 3.5"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>
+              <span class="vbl" id="vbl-full">Bird Full</span>
+              <span class="vband">300–700 nm</span>
+            </button>
+          </div>
+          <div class="vision-note" id="visionNote" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- analyse button -->
+        <button class="btn btn-primary" id="btnAnalyse" onclick="doAnalyse()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" style="width:18px;height:18px;flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/><path d="M4 8h1M4 12h1M4 16h1M20 8h-1M20 12h-1M20 16h-1"/></svg>
+          <span id="btnTxt">Analyse facade</span>
+        </button>
+
+        <!-- mobile result area (appended here on mobile) -->
+        <div id="resultMobile"></div>
+      </div><!-- /analyse-left -->
+
+      <!-- desktop right panel -->
+      <div class="analyse-right" id="analyseRight">
+        <div id="resultDesktop">
+          <div class="no-result-hint"><h3 id="nrTitle">No analysis yet</h3><p id="nrDesc">Frame the facade and run analysis.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: GUIDE -->
+    <div class="page" id="page-guide">
+      <p class="guide-intro" id="guideIntro">Reference for collision-risk assessment.</p>
+      <div>
+        <div class="section-label"><span id="lbl-compare">Bird vs human vision</span></div>
+        <div class="card" style="overflow:hidden;">
+          <div class="compare-head">
+            <div></div><div class="hcol" id="lbl-human">Human</div><div class="bcol" id="lbl-bird">Bird</div>
+          </div>
+          <div id="compareRows"></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-label"><span id="lbl-gloss">Hazard glossary</span></div>
+        <div id="glossCards" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+      <div>
+        <div class="section-label">
+          <span id="lbl-refs">References</span>
+          <button onclick="openRefs()" style="background:none;border:none;cursor:pointer;color:var(--teal-600);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.06em;text-decoration:underline;margin-left:4px;">view all</button>
+        </div>
+        <div class="card" id="refsShort" style="overflow:hidden;"></div>
+      </div>
+    </div>
+
+    <!-- PAGE: SETTINGS -->
+    <div class="page" id="page-settings">
+      <div class="card ksb" id="ksbCard">
+        <div class="ksb-dot" id="ksbDot"></div>
+        <div><div class="ksb-label" id="ksbLabel">No API Key set</div><div class="ksb-sub" id="ksbSub">Add a key to unlock AI analysis</div></div>
+      </div>
+      <div>
+        <div class="section-label"><span id="lbl-provider">AI provider</span></div>
+        <div class="card" id="provList" style="overflow:hidden;"></div>
+        <div class="prov-note" id="provNote"></div>
+      </div>
+      <div>
+        <div class="section-label"><span id="lbl-key">API key</span></div>
+        <div class="key-wrap">
+          <span class="key-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="14" r="4"/><path d="M11 11l8-8"/><path d="M16 6l2 2M14 8l2 2"/></svg></span>
+          <input type="password" class="key-input" id="keyField" placeholder="sk-ant-api03-…" oninput="onKeyInput()">
+          <button class="key-toggle" id="keyToggle" onclick="toggleKeyVis()">SHOW</button>
+        </div>
+        <div id="keyErr" style="display:none;color:var(--danger);font-size:11px;margin-top:4px;"></div>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px;">
+          <button class="btn btn-primary" onclick="saveKey()" style="width:100%;padding:14px;"><span id="btnSaveTxt">Save key</span></button>
+          <button class="btn" onclick="clearKey()" style="width:100%;padding:12px;background:transparent;border:1px solid var(--line);color:var(--ink-3);"><span id="btnClearTxt">Clear saved key</span></button>
+        </div>
+      </div>
+      <div>
+        <div class="section-label"><span id="lbl-lang">Language</span></div>
+        <div class="seg">
+          <button id="lang-en" class="on" onclick="setLang('en')">English</button>
+          <button id="lang-zh" onclick="setLang('zh')">中文</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-label"><span id="lbl-about">About</span></div>
+        <div class="card about-card">
+          <div class="about-av"><svg viewBox="0 0 32 32" fill="none"><path d="M4 16s5-8 12-8 12 8 12 8-5 8-12 8S4 16 4 16z" stroke="#8CC7B9" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="16" r="3.5" fill="#8CC7B9"/><circle cx="16" cy="16" r="1.4" fill="#193831"/></svg></div>
+          <div><div style="font-size:14px;font-weight:600;" id="aboutTitle">BirdEye v4.0 · Collision Risk Engine</div><div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-4);margin-top:3px;" id="aboutBuild">RESPONSIVE · MULTI-PROVIDER</div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" id="nav-analyse" onclick="goPage('analyse')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="12" cy="12" r="3"/></svg>
+      <span id="nl-analyse">Analyse</span>
+    </button>
+    <button class="nav-btn" id="nav-guide" onclick="goPage('guide')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      <span id="nl-guide">Guide</span>
+    </button>
+    <button class="nav-btn" id="nav-settings" onclick="goPage('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h10"/><circle cx="17" cy="8" r="2.4"/><path d="M20 16H10"/><circle cx="7" cy="16" r="2.4"/></svg>
+      <span id="nl-settings">Settings</span>
+    </button>
+  </nav>
+
+</div><!-- /app-shell -->
+
+<!-- REFS MODAL -->
+<div class="refs-modal" id="refsModal" onclick="if(event.target===this)closeRefs()">
+  <div class="refs-sheet">
+    <div class="refs-handle"></div>
+    <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px;" id="refsTitle">Scientific References</div>
+    <div style="font-size:11px;color:var(--ink-3);margin-bottom:16px;line-height:1.5;" id="refsSub"></div>
+    <div id="refsBody"></div>
+    <div class="refs-note" id="refsNote"></div>
+    <button class="refs-close" onclick="closeRefs()" id="refsClose">Close</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// BirdEye v4.0
+// UI: Claude Design | Logic: v3.1
+// ══════════════════════════════════════════
+
+let apiKey = localStorage.getItem('birdeye_key') || '';
+let currentLang = localStorage.getItem('birdeye_lang') || 'en';
+let currentProvider = localStorage.getItem('birdeye_provider') || 'gemini';
+let currentMode = 'camera';
+let visionMode = 'human';
+let camActive = false;
+let uvRaf = null;
+let camStream = null;
+let uploadedB64 = null;
+let uploadedMime = 'image/jpeg';
+let analyseStatus = 'idle';
+let scanTimer = null;
+let scanPct = 0;
+
+const PROVIDERS = {
+  gemini:{name:'Google Gemini',model:'gemini-2.0-flash',modelLabel:'2.0 Flash',placeholder:'AIzaSy…',free:true,
+    validate:k=>k.startsWith('AIza')&&k.length>20,
+    errZh:'Gemini Key 应以 AIzaSy 开头',errEn:'Gemini Key should start with AIzaSy',
+    noteZh:'免费额度：每分钟15次，每天1500次。超出后请切换服务商。去 aistudio.google.com 获取免费 Key。',
+    noteEn:'Free quota: 15 req/min, 1,500/day. Switch provider if exceeded. Get a free key at aistudio.google.com'},
+  anthropic:{name:'Anthropic Claude',model:'claude-sonnet-4-20250514',modelLabel:'Sonnet 4',placeholder:'sk-ant-api03-…',free:false,
+    validate:k=>k.startsWith('sk-ant-'),
+    errZh:'Claude Key 应以 sk-ant- 开头',errEn:'Claude Key should start with sk-ant-',
+    noteZh:'新用户约有 $5 免费额度。去 console.anthropic.com 获取 Key。',
+    noteEn:'New users get ~$5 free credit. Get your key at console.anthropic.com'},
+  openai:{name:'OpenAI',model:'gpt-4o-mini',modelLabel:'GPT-4o mini',placeholder:'sk-proj-…',free:false,
+    validate:k=>k.startsWith('sk-'),
+    errZh:'OpenAI Key 应以 sk- 开头',errEn:'OpenAI Key should start with sk-',
+    noteZh:'新用户约有 $5 免费额度。去 platform.openai.com 获取 Key。',
+    noteEn:'New users get ~$5 free credit. Get your key at platform.openai.com'},
+  deepseek:{name:'DeepSeek',model:'deepseek-chat',modelLabel:'V3',placeholder:'sk-…',free:false,
+    validate:k=>k.startsWith('sk-')&&k.length>10,
+    errZh:'⚠ DeepSeek 图片分析较弱，建议用 Gemini。Key 应以 sk- 开头。',errEn:'⚠ DeepSeek has limited image analysis. Gemini recommended.',
+    noteZh:'⚠ DeepSeek 对图片理解能力较弱，建议使用 Gemini。去 platform.deepseek.com 获取 Key。',
+    noteEn:'⚠ DeepSeek has weaker image understanding. Gemini recommended. Get key at platform.deepseek.com'},
+};
+
+const STR = {
+  en:{
+    brandSub:'COLLISION RISK · v4.0',
+    navAnalyse:'Analyse',navGuide:'Guide',navSettings:'Settings',
+    camLabel:'Camera',uploadLabel:'Upload',
+    visionLabel:'Vision mode',
+    vbl_human:'Human',vbl_uv:'Bird UV',vbl_full:'Bird Full',
+    vnote_human:'Trichromatic baseline (400–700 nm). Standard photopic human response.',
+    vnote_uv:'Tetrachromatic UV channel (300–400 nm). Birds perceive UV reflectance invisible to humans.',
+    vnote_full:'Wide-field simulation (~300°) with fisheye distortion and narrow binocular zone.',
+    phTitle:'Live Bird Eye View',phDesc:'Open camera to simulate bird vision and mark glass hazards with AI',
+    camBlockText:'Camera unavailable — showing simulated facade',
+    btnAnalyse:'Analyse facade',btnReanalyse:'Re-analyse',btnAnalysing:'Analysing…',
+    upTitle:'Upload a render or photo',upSub:'Facade elevation, photograph, or visualisation',
+    noKeyText:'No API key — add one in Settings to enable AI analysis',
+    nrTitle:'No analysis yet',nrDesc:'Frame the facade and run analysis to map collision hazards.',
+    resultLabel:'Analysis result',overallLabel:'Overall facade risk',tiLabel:'Threat index',
+    zonesLabel:'Hazard zones',mitLabel:'Mitigation',detectedTag:'DETECTED',
+    guideIntro:'Reference for collision-risk assessment.',
+    compareLabel:'Bird vs human vision',humanCol:'Human',birdCol:'Bird',
+    glossLabel:'Hazard glossary',refsLabel:'References',
+    providerLabel:'AI provider',keyLabel:'API key',langLabel:'Language',aboutLabel:'About',
+    btnSave:'Save key',btnClear:'Clear saved key',btnSaved:'✓ Saved',
+    keyNoSet:'No API Key set',keyNoSetSub:'Add a key to unlock AI analysis',
+    keySet:'API Key active ✓',keySetSub:'AI analysis unlocked. Key stored locally.',
+    aboutTitle:'BirdEye v4.0 · Collision Risk Engine',aboutBuild:'RESPONSIVE · MULTI-PROVIDER',
+    refsTitle:'Scientific References',refsSub:'Peer-reviewed studies supporting this tool\'s simulations',
+    refsNote:'⚠️ Visual simulations are educational approximations. Bird vision varies by species.',
+    refsClose:'Close',
+    scanText:'Scanning facade geometry',
+    sev_low:'Low',sev_mod:'Moderate',sev_high:'High',sev_sev:'Severe',
+  },
+  zh:{
+    brandSub:'碰撞风险分析仪 · v4.0',
+    navAnalyse:'分析',navGuide:'指南',navSettings:'设置',
+    camLabel:'相机',uploadLabel:'上传',
+    visionLabel:'视觉模式',
+    vbl_human:'人眼',vbl_uv:'鸟类UV',vbl_full:'鸟类全视野',
+    vnote_human:'三色视觉基线（400–700 nm），标准人类光视感应。',
+    vnote_uv:'四色UV通道（300–400 nm），鸟类能感知人类不可见的UV反射。',
+    vnote_full:'广角全视野模拟（约300°），含鱼眼畸变与极窄双眼区。',
+    phTitle:'实时鸟眼视角',phDesc:'开启摄像头，实时模拟鸟类视觉，用AI标注危险玻璃区域',
+    camBlockText:'无法访问摄像头 — 显示模拟立面',
+    btnAnalyse:'分析立面',btnReanalyse:'重新分析',btnAnalysing:'分析中…',
+    upTitle:'上传效果图或照片',upSub:'立面图、照片或可视化渲染',
+    noKeyText:'未设置 API Key — 请在设置页面添加以启用 AI 分析',
+    nrTitle:'尚未分析',nrDesc:'对准建筑立面并运行分析，标记碰撞危险区域。',
+    resultLabel:'分析结果',overallLabel:'立面整体风险',tiLabel:'威胁指数',
+    zonesLabel:'危险区域',mitLabel:'缓解措施',detectedTag:'已检测',
+    guideIntro:'碰撞风险评估参考资料。',
+    compareLabel:'鸟类与人类视觉对比',humanCol:'人类',birdCol:'鸟类',
+    glossLabel:'危险类型术语',refsLabel:'参考文献',
+    providerLabel:'AI 提供方',keyLabel:'API 密钥',langLabel:'语言',aboutLabel:'关于',
+    btnSave:'保存密钥',btnClear:'清除已保存的密钥',btnSaved:'✓ 已保存',
+    keyNoSet:'未设置 API Key',keyNoSetSub:'设置后解锁AI分析功能',
+    keySet:'API Key 已设置 ✓',keySetSub:'AI分析功能已解锁，Key保存在本地',
+    aboutTitle:'BirdEye v4.0 · 碰撞风险引擎',aboutBuild:'响应式版本 · 多服务商',
+    refsTitle:'科研来源',refsSub:'支撑本工具视觉模拟的同行评审研究',
+    refsNote:'⚠️ 视觉模拟为科普近似演示。鸟类视觉因物种而异。',
+    refsClose:'关闭',
+    scanText:'正在扫描立面几何',
+    sev_low:'低风险',sev_mod:'中等风险',sev_high:'高危',sev_sev:'极度危险',
+  }
+};
+
+const VNOTES = {
+  human:{en:'Trichromatic baseline (400–700 nm). Standard photopic human response.',zh:'三色视觉基线（400–700 nm），标准人类光视感应。'},
+  uv:   {en:'Tetrachromatic UV channel (300–400 nm). Birds perceive UV reflectance invisible to humans.',zh:'四色UV通道（300–400 nm），鸟类能感知人类不可见的UV反射。'},
+  full: {en:'Wide-field simulation (~300°) with fisheye distortion and narrow binocular zone.',zh:'广角全视野模拟（约300°），含鱼眼畸变与极窄双眼区。'},
+};
+const VCHIPS = {human:'HUMAN · 400–700 nm',uv:'BIRD UV · 300–400 nm',full:'BIRD FULL · 300–700 nm'};
+const VFILTERS = {human:'none',uv:'hue-rotate(40deg) saturate(2.2) brightness(0.88) contrast(1.15) sepia(0.15)',full:'hue-rotate(40deg) saturate(2.2) brightness(0.88) contrast(1.15) sepia(0.15)'};
+
+const SEVERITY = {
+  low: {rank:1,c:'var(--sev-low)', bg:'var(--sev-low-bg)', en:'Low',      zh:'低风险'   },
+  mod: {rank:2,c:'var(--sev-mod)', bg:'var(--sev-mod-bg)', en:'Moderate', zh:'中等风险' },
+  high:{rank:3,c:'var(--sev-high)',bg:'var(--sev-high-bg)',en:'High',      zh:'高危'     },
+  sev: {rank:4,c:'var(--sev-sev)', bg:'var(--sev-sev-bg)', en:'Severe',   zh:'极度危险' },
+};
+const HTYPES = {
+  passage:   {en:'Passage effect',zh:'视觉穿透',en_def:'Glass on opposing walls creates the illusion of a flyable corridor.',zh_def:'建筑两侧玻璃形成"可飞穿"的视觉走廊。'},
+  reflection:{en:'Reflection',    zh:'镜面反射',en_def:'Mirrored sky or vegetation on glass reads as continuous open space.',zh_def:'玻璃将天空或植被完美反射，鸟类误判为可飞入的自然环境。'},
+  transparency:{en:'Transparency',zh:'透明障碍',en_def:'Clear glass registers as absent space rather than a solid barrier.',zh_def:'透明玻璃对鸟类视觉几乎等同于不存在。'},
+};
+const VCOMP = [
+  {en:'Color receptors',zh:'色觉感受器',h_en:'3 (RGB)',h_zh:'3（RGB）',b_en:'4 (RGB + UV)',b_zh:'4（RGB+UV）'},
+  {en:'UV perception',  zh:'紫外感知',  h_en:'None',  h_zh:'无',       b_en:'Acute',       b_zh:'敏锐'},
+  {en:'Field of view',  zh:'视场角',    h_en:'~180°', h_zh:'约180°',   b_en:'~300°',       b_zh:'约300°'},
+  {en:'Binocular overlap',zh:'双眼重叠',h_en:'~120°', h_zh:'约120°',   b_en:'~20–30°',     b_zh:'约20–30°'},
+  {en:'Motion detection',zh:'运动侦测', h_en:'~60 Hz',h_zh:'约60Hz',   b_en:'~100–145 Hz', b_zh:'约100–145Hz'},
+  {en:'Glass recognition',zh:'玻璃识别',h_en:'Learned',h_zh:'经验习得',b_en:'Absent',       b_zh:'缺失'},
+];
+const REFS = [
+  {cat:'UV tetrachromacy',title:'Ultraviolet vision in birds',authors:'Cuthill et al. (2000) · Advances in the Study of Behavior, 29',url:'https://doi.org/10.1016/S0065-3454(08)60105-9'},
+  {cat:'UV distribution', title:'The phylogenetic distribution of UV sensitivity in birds',authors:'Ödeen & Håstad (2013) · BMC Evolutionary Biology, 13:36',url:'https://doi.org/10.1186/1471-2148-13-36'},
+  {cat:'Binocular vision', title:"What is binocular vision for? A birds' eye view",authors:'Martin (2009) · Journal of Vision, 9(11)',url:'https://doi.org/10.1167/9.11.14'},
+  {cat:'Visual fields',    title:'Visual fields in Short-toed Eagles',authors:'Martin & Katzir (1999) · Brain Behav Evol, 53(2)',url:'https://doi.org/10.1159/000006582'},
+  {cat:'Collisions',       title:'Bird–building collisions in the United States',authors:'Loss et al. (2014) · The Condor, 116(1)',url:'https://doi.org/10.1650/CONDOR-13-090.1'},
+  {cat:'Design guidelines',title:'Bird-Friendly Building Design Guidelines',authors:'American Bird Conservancy (ABC)',url:'https://abcbirds.org/glass-collisions/'},
+];
+
+function t(k){return(STR[currentLang]||STR.en)[k]||k;}
+function $id(id){return document.getElementById(id);}
+
+// ── NAV ──
+function goPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.top-nav-btn').forEach(b=>b.classList.remove('active'));
+  $id('page-'+id).classList.add('active');
+  const nb=$id('nav-'+id); if(nb)nb.classList.add('active');
+  const tn=$id('tnav-'+id); if(tn)tn.classList.add('active');
+  if(id==='guide')renderGuide();
+  if(id==='settings')renderSettings();
+}
+
+// ── MODE ──
+function setMode(m){
+  currentMode=m;
+  $id('modeCamera').classList.toggle('on',m==='camera');
+  $id('modeUpload').classList.toggle('on',m==='upload');
+  $id('cameraView').style.display=m==='camera'?'block':'none';
+  $id('uploadView').style.display=m==='upload'?'block':'none';
+  clearResult();
+  if(m==='camera')startCamera(); else stopCamera();
+  updateBanners();
+}
+
+// ── VISION ──
+function setVision(v){
+  visionMode=v;
+  ['human','uv','full'].forEach(id=>$id('vb-'+id).classList.toggle('on',id===v));
+  $id('visionNote').textContent=VNOTES[v][currentLang==='zh'?'zh':'en'];
+  const chip=$id('modeChip'); if(chip){chip.textContent=VCHIPS[v];chip.style.display=camActive?'block':'none';}
+  $id('imgChip').textContent=VCHIPS[v];
+  const upImg=$id('upPreviewImg'); if(upImg)upImg.style.filter=VFILTERS[v];
+  if(camActive)applyVisionLive();
+}
+
+function applyVisionLive(){
+  const vid=$id('videoEl'),cvs=$id('uvCanvas');
+  stopUVLoop();
+  if(visionMode==='human'){vid.style.opacity='1';cvs.style.display='none';}
+  else{vid.style.opacity='0';cvs.style.display='block';startUVLoop(visionMode==='full');}
+}
+
+// ── CAMERA ──
+async function startCamera(){
+  if(camActive)return;
+  const ph=$id('camPh'),vid=$id('videoEl');
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+    camStream=s; vid.srcObject=s; vid.style.display='block';
+    if(ph)ph.style.display='none';
+    $id('simChip').style.display='none';
+    $id('camBlockBanner').style.display='none';
+    $id('modeChip').style.display='block';
+    $id('modeChip').textContent=VCHIPS[visionMode];
+    camActive=true;
+    applyVisionLive();
+  }catch(e){
+    camActive=false; vid.style.display='none';
+    if(ph)ph.style.display='flex';
+    $id('simChip').style.display='block';
+    $id('camBlockBanner').style.display='flex';
+    $id('modeChip').style.display='block';
+    $id('modeChip').textContent=VCHIPS[visionMode];
+  }
+  updateBanners();
+}
+
+function stopCamera(){
+  stopUVLoop();
+  if(camStream){camStream.getTracks().forEach(tr=>tr.stop());camStream=null;}
+  camActive=false;
+  const vid=$id('videoEl'); if(vid){vid.srcObject=null;vid.style.display='none';}
+  $id('uvCanvas').style.display='none';
+  $id('modeChip').style.display='none';
+}
+
+// ── UV CANVAS ──
+function startUVLoop(birdFull){
+  const vid=$id('videoEl'),cvs=$id('uvCanvas'),ctx=cvs.getContext('2d');
+  function frame(){
+    if(!camActive)return;
+    const W=vid.videoWidth||640,H=vid.videoHeight||480;
+    cvs.width=W;cvs.height=H;
+    if(birdFull){drawFisheye(ctx,vid,W,H);applyUVShift(ctx,W,H);drawBinocularMask(ctx,W,H);drawUVVignette(ctx,W,H);}
+    else{ctx.drawImage(vid,0,0);applyUVShift(ctx,W,H);}
+    uvRaf=requestAnimationFrame(frame);
+  }
+  frame();
+}
+function stopUVLoop(){if(uvRaf){cancelAnimationFrame(uvRaf);uvRaf=null;}}
+function drawFisheye(ctx,vid,W,H){
+  const tc=document.createElement('canvas');tc.width=W;tc.height=H;
+  const tCtx=tc.getContext('2d');tCtx.drawImage(vid,0,0);
+  const id=tCtx.getImageData(0,0,W,H),out=ctx.createImageData(W,H),src=id.data,dst=out.data,cx=W/2,cy=H/2,k=0.35;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const dx=(x-cx)/cx,dy=(y-cy)/cy,r=Math.sqrt(dx*dx+dy*dy),th=Math.atan2(dy,dx),rn=r*(1+k*r*r);
+    const sx=Math.round(cx+rn*Math.cos(th)*cx),sy=Math.round(cy+rn*Math.sin(th)*cy),di=(y*W+x)*4;
+    if(sx>=0&&sx<W&&sy>=0&&sy<H){const si=(sy*W+sx)*4;dst[di]=src[si];dst[di+1]=src[si+1];dst[di+2]=src[si+2];dst[di+3]=255;}
+    else{dst[di]=dst[di+1]=dst[di+2]=0;dst[di+3]=255;}
+  }
+  ctx.putImageData(out,0,0);
+}
+function applyUVShift(ctx,W,H){
+  const id=ctx.getImageData(0,0,W,H),d=id.data;
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];d[i]=Math.min(255,r*.72+b*.12)*.9;d[i+1]=Math.min(255,g*1.4)*.88;d[i+2]=Math.min(255,b*1.45+r*.2)*.94;}
+  ctx.putImageData(id,0,0);
+}
+function drawBinocularMask(ctx,W,H){
+  const cw=W*.15,cx=W/2;
+  const gL=ctx.createLinearGradient(0,0,cx-cw,0);gL.addColorStop(0,'rgba(140,199,185,0.6)');gL.addColorStop(1,'rgba(140,199,185,0)');
+  ctx.fillStyle=gL;ctx.fillRect(0,0,cx-cw,H);
+  const gR=ctx.createLinearGradient(W,0,cx+cw,0);gR.addColorStop(0,'rgba(140,199,185,0.6)');gR.addColorStop(1,'rgba(140,199,185,0)');
+  ctx.fillStyle=gR;ctx.fillRect(cx+cw,0,W-cx-cw,H);
+}
+function drawUVVignette(ctx,W,H){
+  const g=ctx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.75);
+  g.addColorStop(0,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(30,0,60,0.35)');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
+// ── FILE UPLOAD ──
+function handleFile(e){
+  const file=e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const src=ev.target.result,img=new Image();
+    img.onload=()=>{
+      const cvs=document.createElement('canvas');
+      cvs.width=img.naturalWidth;cvs.height=img.naturalHeight;
+      cvs.getContext('2d').drawImage(img,0,0);
+      const jpegUrl=cvs.toDataURL('image/jpeg',0.92);
+      uploadedB64=jpegUrl.split(',')[1];uploadedMime='image/jpeg';
+      const pImg=$id('upPreviewImg');
+      pImg.src=src;pImg.style.filter=VFILTERS[visionMode];
+      $id('uploadEmpty').style.display='none';
+      $id('upPreviewWrap').style.display='block';
+      $id('upDangerOverlay').innerHTML='';
+      clearResult();updateBanners();
+    };
+    img.src=src;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── SCAN ANIM ──
+function startScan(){
+  scanPct=0;
+  const line=$id('scanLine'),txt=$id('scanTxt'),fade=$id('scanFade');
+  line.style.display='block';txt.style.display='flex';fade.style.display='block';
+  scanTimer=setInterval(()=>{
+    scanPct=Math.min(98,scanPct+Math.random()*9+3);
+    const p=Math.round(scanPct);
+    line.style.top=p+'%';fade.style.height=p+'%';
+    txt.innerHTML=`<span>${t('scanText')}…</span><span>${p}%</span>`;
+  },95);
+}
+function stopScan(){
+  clearInterval(scanTimer);
+  $id('scanLine').style.display='none';$id('scanTxt').style.display='none';$id('scanFade').style.display='none';
+}
+
+// ── ANALYSE ──
+async function doAnalyse(){
+  if(!apiKey){goPage('settings');return;}
+  if(analyseStatus==='running')return;
+  analyseStatus='running';
+  $id('btnAnalyse').disabled=true;$id('btnTxt').textContent=t('btnAnalysing');
+  let b64=null,mime='image/jpeg';
+  if(currentMode==='camera'){
+    const vid=$id('videoEl'),snap=document.createElement('canvas');
+    snap.width=vid.videoWidth||640;snap.height=vid.videoHeight||480;
+    snap.getContext('2d').drawImage(vid,0,0);
+    b64=snap.toDataURL('image/jpeg',.85).split(',')[1];
+    startScan();$id('dangerOverlay').innerHTML='';
+  } else {
+    if(!uploadedB64){analyseStatus='idle';$id('btnAnalyse').disabled=false;return;}
+    b64=uploadedB64;mime=uploadedMime;
+    $id('upDangerOverlay').innerHTML='';
+  }
+  showThinking();
+  await callAI(b64,mime,currentMode==='camera');
+  stopScan();
+  analyseStatus='done';
+  $id('btnAnalyse').disabled=false;
+  $id('btnTxt').textContent=t('btnReanalyse');
+}
+
+function clearResult(){
+  analyseStatus='idle';
+  $id('btnTxt').textContent=t('btnAnalyse');
+  $id('btnAnalyse').disabled=!apiKey||(currentMode==='upload'&&!uploadedB64);
+  const html=`<div class="no-result-hint"><h3>${t('nrTitle')}</h3><p>${t('nrDesc')}</p></div>`;
+  setResult(html);
+  if(currentMode==='camera')$id('dangerOverlay').innerHTML='';
+  else if($id('upDangerOverlay'))$id('upDangerOverlay').innerHTML='';
+}
+
+function setResult(html){
+  const isD=window.innerWidth>=1024;
+  const el=isD?$id('resultDesktop'):$id('resultMobile');
+  if(el)el.innerHTML=html;
+  // keep the other one empty
+  const other=isD?$id('resultMobile'):$id('resultDesktop');
+  if(other)other.innerHTML='';
+}
+
+function showThinking(){
+  setResult(`<div style="display:flex;align-items:center;gap:10px;padding:20px 0;"><div class="thinkdots"><div class="thinkdot"></div><div class="thinkdot"></div><div class="thinkdot"></div></div><span style="font-size:12px;color:var(--ink-3);">${t('resultLabel')}…</span></div>`);
+}
+
+// ── AI ──
+function isQuota(msg){return /quota|rate.?limit|429|exceeded.*quota|resource.*exhausted/i.test(msg);}
+
+async function callAIOnce(b64,mime,prompt){
+  const cfg=PROVIDERS[currentProvider];
+  if(currentProvider==='gemini'){
+    const url=`https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${apiKey}`;
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],generationConfig:{maxOutputTokens:1200}})});
+    const d=await r.json();
+    if(d.error){const e=new Error(d.error.message);e.status=r.status||d.error.code;throw e;}
+    return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
+  } else if(currentProvider==='openai'){
+    const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:cfg.model,max_tokens:1200,messages:[{role:'user',content:[{type:'image_url',image_url:{url:`data:${mime};base64,${b64}`}},{type:'text',text:prompt}]}]})});
+    const d=await r.json();if(d.error){const e=new Error(d.error.message);e.status=r.status;throw e;}
+    return d.choices?.[0]?.message?.content||'';
+  } else if(currentProvider==='deepseek'){
+    const r=await fetch('https://api.deepseek.com/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${apiKey}`},body:JSON.stringify({model:cfg.model,max_tokens:1200,messages:[{role:'user',content:[{type:'image_url',image_url:{url:`data:${mime};base64,${b64}`}},{type:'text',text:prompt}]}]})});
+    const d=await r.json();if(d.error){const e=new Error(d.error.message);e.status=r.status;throw e;}
+    return d.choices?.[0]?.message?.content||'';
+  } else {
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:cfg.model,max_tokens:1200,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mime,data:b64}},{type:'text',text:prompt}]}]})});
+    const d=await r.json();if(d.error){const e=new Error(d.error.message);e.status=r.status;throw e;}
+    return(d.content?.[0]?.text||'').trim();
+  }
+}
+
+async function callAI(b64,mime,isLive){
+  const isZh=currentLang==='zh';
+  const livePrompt=`You are a bird-friendly architecture AI. Analyze this building image for bird collision hazards. Return ONLY valid JSON, no markdown: {"rating":"${isZh?'友好|中等风险|高危':'Friendly|Medium Risk|High Risk'}","summary":"${isZh?'20字内':'under 15 words'}","zones":[{"label":"⚠ label","level":"danger|warn|safe","top":10,"left":20,"width":40,"height":50}]}. Zones as % of image. Empty zones=[] if safe. ${isZh?'Labels in Chinese.':'Labels in English.'}`;
+  const uploadPrompt=isZh?`你是专业的鸟类友好建筑分析AI。分析此建筑图片的鸟类碰撞危险。用中文回复（不要Markdown）：\n评级：[友好/中等风险/高危]\n总结：（30字内）\n危险区域：\n- 区域：原因\n安全元素：\n- 元素：原因\n改进建议：\n- 建议`:`You are a bird-friendly architecture AI. Analyze this building image for bird collision hazards. Reply in English (no Markdown):\nRating: [Friendly/Medium Risk/High Risk]\nSummary: (max 20 words)\nHazard Zones:\n- zone: reason\nSafe Elements:\n- element: reason\nImprovements:\n- suggestion`;
+  const prompt=isLive?livePrompt:uploadPrompt;
+  const MAX=2;let lastErr=null;
+  for(let att=0;att<=MAX;att++){
+    try{
+      if(att>0){
+        const w=att*2000;
+        showThinking();
+        await new Promise(res=>setTimeout(res,w));
+      }
+      const text=await callAIOnce(b64,mime,prompt);
+      if(isLive){
+        try{
+          const p=JSON.parse(text.replace(/```json|```/g,'').trim());
+          renderLiveBoxes(p.zones||[]);
+          const ic=/高危|High/.test(p.rating)?'🚨':/友好|Friendly/.test(p.rating)?'✅':'⚠️';
+          showLiveStrip(`${ic} <strong>${p.rating||''}</strong> — ${p.summary||''}`);
+          renderResult(text,true);
+        }catch{renderLiveBoxes([]);showLiveStrip(isZh?'✓ 未检测到明显危险区域':'✓ No significant hazards detected');setResult(`<div class="no-result-hint"><h3>✓</h3><p>${isZh?'未检测到明显危险区域':'No significant hazards detected'}</p></div>`);}
+      } else {renderResult(text,false);}
+      return;
+    }catch(err){lastErr=err;if(isQuota(err.message))break;if(att<MAX)continue;}
+  }
+  const em=lastErr?.message||(isZh?'请检查API Key':'Please check your API Key');
+  const pn=PROVIDERS[currentProvider].name;
+  if(isLive){renderLiveBoxes([]);showLiveStrip('❌ '+em);}
+  const errHtml=isQuota(em)
+    ?`<div class="card" style="padding:14px;" class="fade-in"><div style="color:var(--danger);font-weight:700;margin-bottom:6px;">❌ ${isZh?`${pn} 配额已用尽`:`${pn} Quota Exceeded`}</div><div style="font-size:12px;color:var(--ink-3);line-height:1.6;margin-bottom:10px;">${isZh?'请切换到其他服务商或等待配额刷新':'Switch to another provider or wait for quota reset'}</div><button onclick="goPage('settings')" style="width:100%;padding:10px;background:var(--teal-700);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">⚙ ${isZh?'切换服务商':'Switch Provider'}</button></div>`
+    :`<div class="card" style="padding:14px;color:var(--danger);font-size:13px;">❌ ${isZh?'连接失败：':'Connection failed: '}${em}</div>`;
+  setResult(errHtml);
+}
+
+function renderLiveBoxes(zones){
+  const ov=$id('dangerOverlay');
+  if(!zones||!zones.length){ov.innerHTML='';return;}
+  ov.innerHTML=zones.map(z=>`<div class="d-box ${z.level}" style="top:${z.top}%;left:${z.left}%;width:${z.width}%;height:${z.height}%;"><div class="d-lbl">${z.label}</div></div>`).join('');
+}
+
+function showLiveStrip(msg){
+  const s=$id('liveStrip');s.innerHTML=msg;s.style.display='block';
+  clearTimeout(s._t);s._t=setTimeout(()=>{s.style.display='none';},7000);
+}
+
+function renderResult(text,isLiveJson){
+  const isZh=currentLang==='zh',L=isZh?'zh':'en';
+  if(isLiveJson){
+    try{
+      const p=JSON.parse(text.replace(/```json|```/g,'').trim());
+      const lk=/高危|High/.test(p.rating)?'sev':/中等|Medium/.test(p.rating)?'mod':'low';
+      const s=SEVERITY[lk];
+      setResult(`<div class="result-area fade-in"><div class="section-label" style="margin-top:4px;"><span>${t('resultLabel')}</span></div><div class="card r-overall"><div class="r-row"><div><div class="r-label">${t('overallLabel')}</div><div class="r-val" style="color:${s.c};">${p.rating||s[L]}</div></div></div><div class="sev-meter">${[1,2,3,4].map(i=>`<div class="sev-bar" style="background:${i<=s.rank?s.c:'var(--line)'}"></div>`).join('')}</div><div class="r-tags"><span class="r-tag">${t('detectedTag')}</span></div></div><div style="padding:6px 2px;font-size:12px;color:var(--ink-3);line-height:1.6;">${p.summary||''}</div></div>`);
+    }catch{}
+    return;
+  }
+  const lines=text.split('\n').filter(l=>l.trim());
+  const rm=text.match(isZh?/评级[：:]\s*([^\n]+)/:/Rating[:\s]+([^\n]+)/i);
+  const rating=rm?rm[1].trim():'';
+  const lk=/高危|High Risk/i.test(rating)?'sev':/中等|Medium/i.test(rating)?'mod':/友好|Friendly/i.test(rating)&&!/不|not/i.test(rating)?'low':'mod';
+  const s=SEVERITY[lk];
+  const ti=Math.min(100,s.rank*18+Math.floor(Math.random()*12)+5);
+  let body='',curSec='';
+  for(const line of lines){
+    if(/^(评级|Rating)/i.test(line))continue;
+    if(/^(总结|Summary)/i.test(line)){const v=line.replace(/^(总结|Summary)[：:\s]*/i,'').trim();if(v)body+=`<div style="font-size:12.5px;color:var(--ink-3);line-height:1.6;margin-bottom:8px;">${v}</div>`;}
+    else if(/危险区域|Hazard|安全|Safe|改进|Improvements/i.test(line)){const col=/危险|Hazard/i.test(line)?'var(--danger)':/安全|Safe/i.test(line)?'var(--green)':'var(--teal-600)';const ico=/危险|Hazard/i.test(line)?'⚠':/安全|Safe/i.test(line)?'✓':'→';curSec=line;body+=`<div class="ai-sec" style="color:${col};">${ico} ${line.replace(/[：:]/,'').trim()}</div>`;}
+    else if(line.startsWith('-')){const ico=/危险|Hazard|glass/i.test(curSec+line)?'🔴':/安全|Safe|plant/i.test(curSec+line)?'🟢':'🔵';body+=`<div class="ai-item"><span>${ico}</span><span>${line.slice(1).trim()}</span></div>`;}
+  }
+  setResult(`<div class="result-area fade-in"><div class="section-label" style="margin-top:4px;"><span>${t('resultLabel')}</span></div><div class="card r-overall"><div class="r-row"><div><div class="r-label">${t('overallLabel')}</div><div class="r-val" style="color:${s.c};">${rating||s[L]}</div></div><div><div class="r-label" style="text-align:right;">${t('tiLabel')}</div><div class="r-ti">${ti}<span>/100</span></div></div></div><div class="sev-meter">${[1,2,3,4].map(i=>`<div class="sev-bar" style="background:${i<=s.rank?s.c:'var(--line)'}"></div>`).join('')}</div><div class="r-tags"><span class="r-tag">${t('detectedTag')}</span></div></div>${body?`<div class="card detail-card">${body}</div>`:''}</div>`);
+}
+
+// ── GUIDE ──
+function renderGuide(){
+  const isZh=currentLang==='zh',L=isZh?'zh':'en';
+  $id('guideIntro').textContent=t('guideIntro');
+  $id('lbl-compare').textContent=t('compareLabel');
+  $id('lbl-human').textContent=t('humanCol');$id('lbl-bird').textContent=t('birdCol');
+  $id('lbl-gloss').textContent=t('glossLabel');$id('lbl-refs').textContent=t('refsLabel');
+  $id('compareRows').innerHTML=VCOMP.map((r,i)=>`<div class="compare-row" style="${i<VCOMP.length-1?'border-bottom:1px solid var(--line-2);':''}"><div class="cr-label">${r[L]}</div><div class="cr-human">${r[isZh?'h_zh':'h_en']}</div><div class="cr-bird">${r[isZh?'b_zh':'b_en']}</div></div>`).join('');
+  $id('glossCards').innerHTML=Object.entries(HTYPES).map(([k,v])=>`<div class="card gloss-card"><div class="gloss-icon">${v[L][0]}</div><div><div class="gloss-name">${v[L]}</div><p class="gloss-def">${v[isZh?'zh_def':'en_def']}</p></div></div>`).join('');
+  $id('refsShort').innerHTML=REFS.slice(0,3).map((r,i)=>`<div class="ref-item" style="${i<2?'border-bottom:1px solid var(--line-2);':''}"><span class="ref-num">${String(i+1).padStart(2,'0')}</span><div><div class="ref-title">${r.title}</div><div class="ref-src">${r.authors}</div></div></div>`).join('');
+}
+
+// ── SETTINGS ──
+function renderSettings(){
+  const isZh=currentLang==='zh';
+  $id('lbl-provider').textContent=t('providerLabel');$id('lbl-key').textContent=t('keyLabel');
+  $id('lbl-lang').textContent=t('langLabel');$id('lbl-about').textContent=t('aboutLabel');
+  $id('btnSaveTxt').textContent=t('btnSave');$id('btnClearTxt').textContent=t('btnClear');
+  $id('aboutTitle').textContent=t('aboutTitle');$id('aboutBuild').textContent=t('aboutBuild');
+  const cfg=PROVIDERS[currentProvider];
+  $id('provList').innerHTML=Object.entries(PROVIDERS).map(([id,p])=>`<button class="prov-item${currentProvider===id?' on':''}" onclick="selectProvider('${id}')"><div><div class="prov-name">${p.name}${p.free?` <span class="prov-free">${isZh?'免费':'FREE'}</span>`:''}</div><div class="prov-model">${p.model}</div></div><div class="radio-dot">${currentProvider===id?`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>`:''}</div></button>`).join('');
+  $id('provNote').textContent=isZh?cfg.noteZh:cfg.noteEn;
+  $id('keyField').placeholder=cfg.placeholder;
+  if(apiKey&&!$id('keyField').value)$id('keyField').value=apiKey;
+  $id('lang-en').classList.toggle('on',currentLang==='en');
+  $id('lang-zh').classList.toggle('on',currentLang==='zh');
+  updateKeyUI();
+}
+
+function selectProvider(id){currentProvider=id;localStorage.setItem('birdeye_provider',id);renderSettings();}
+
+// ── KEY ──
+function onKeyInput(){$id('keyErr').style.display='none';}
+function saveKey(){
+  const v=$id('keyField').value.trim(),cfg=PROVIDERS[currentProvider];
+  if(v&&!cfg.validate(v)){$id('keyErr').textContent=currentLang==='zh'?cfg.errZh:cfg.errEn;$id('keyErr').style.display='block';return;}
+  apiKey=v;
+  if(v)localStorage.setItem('birdeye_key',v); else localStorage.removeItem('birdeye_key');
+  localStorage.setItem('birdeye_provider',currentProvider);
+  const btn=$id('btnSaveTxt');btn.textContent=t('btnSaved');
+  setTimeout(()=>{btn.textContent=t('btnSave');},2000);
+  updateKeyUI();updateBanners();
+}
+function clearKey(){apiKey='';localStorage.removeItem('birdeye_key');$id('keyField').value='';updateKeyUI();updateBanners();}
+function toggleKeyVis(){const i=$id('keyField'),b=$id('keyToggle');i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?(currentLang==='zh'?'显示':'SHOW'):(currentLang==='zh'?'隐藏':'HIDE');}
+function updateKeyUI(){
+  const has=!!apiKey;
+  $id('keyDot').classList.toggle('active',has);
+  const kd=$id('ksbDot'),kl=$id('ksbLabel'),ks=$id('ksbSub');
+  if(kd)kd.classList.toggle('on',has);
+  if(kl)kl.textContent=has?t('keySet'):t('keyNoSet');
+  if(ks)ks.textContent=has?t('keySetSub'):t('keyNoSetSub');
+}
+function updateBanners(){
+  const show=!apiKey&&(currentMode==='camera'||!!uploadedB64);
+  $id('noKeyBanner').style.display=show?'flex':'none';
+  $id('btnAnalyse').disabled=!apiKey||(currentMode==='upload'&&!uploadedB64);
+}
+
+// ── LANGUAGE ──
+function setLang(l){currentLang=l;localStorage.setItem('birdeye_lang',l);applyLang();}
+function applyLang(){
+  const isZh=currentLang==='zh';
+  document.title=isZh?'BirdEye — 碰撞风险分析仪':'BirdEye — Collision Risk Analysis';
+  $id('brandSub').textContent=t('brandSub');
+  ['analyse','guide','settings'].forEach(id=>{
+    const nl=$id('nl-'+id),tl=$id('tl-'+id);
+    const k='nav'+id[0].toUpperCase()+id.slice(1);
+    if(nl)nl.textContent=t(k);if(tl)tl.textContent=t(k);
+  });
+  $id('lbl-cam').textContent=t('camLabel');$id('lbl-upload').textContent=t('uploadLabel');
+  $id('lbl-vision').textContent=t('visionLabel');
+  $id('vbl-human').textContent=t('vbl_human');$id('vbl-uv').textContent=t('vbl_uv');$id('vbl-full').textContent=t('vbl_full');
+  $id('visionNote').textContent=VNOTES[visionMode][isZh?'zh':'en'];
+  $id('btnTxt').textContent=analyseStatus==='done'?t('btnReanalyse'):t('btnAnalyse');
+  $id('upTitle').textContent=t('upTitle');$id('upSub').textContent=t('upSub');
+  $id('phTitle').textContent=t('phTitle');$id('phDesc').textContent=t('phDesc');
+  $id('camBlockBanner').querySelector('span').textContent=t('camBlockText');
+  $id('noKeyBanner').querySelector('span').innerHTML=isZh
+    ?`未设置 API Key — <a onclick="goPage('settings')">在设置中添加</a>以启用AI分析`
+    :`No API key — <a onclick="goPage('settings')">add one in Settings</a> to enable AI analysis`;
+  $id('lang-en').classList.toggle('on',currentLang==='en');
+  $id('lang-zh').classList.toggle('on',currentLang==='zh');
+  updateKeyUI();clearResult();
+}
+
+// ── REFS MODAL ──
+function openRefs(){
+  const isZh=currentLang==='zh';
+  $id('refsTitle').textContent=t('refsTitle');$id('refsSub').textContent=t('refsSub');
+  $id('refsNote').textContent=t('refsNote');$id('refsClose').textContent=t('refsClose');
+  $id('refsBody').innerHTML=REFS.map(r=>`<a class="ref-card" href="${r.url}" target="_blank" rel="noopener"><div class="ref-cat">${r.cat}</div><div class="ref-rtitle">${r.title}</div><div class="ref-rauth">${r.authors}</div></a>`).join('');
+  $id('refsModal').classList.add('open');
+}
+function closeRefs(){$id('refsModal').classList.remove('open');}
+
+// ── INIT ──
+window.addEventListener('load',()=>{
+  applyLang();
+  renderGuide();
+  if(apiKey)$id('keyField').value=apiKey;
+  setVision('human');
+  startCamera();
+  updateBanners();
+});
+window.addEventListener('resize',()=>{
+  // re-route result on layout change
+  if(analyseStatus!=='idle') clearResult();
+});
+</script>
+</body>
+</html>
