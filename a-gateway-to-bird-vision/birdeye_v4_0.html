@@ -889,14 +889,14 @@ async function callAIOnce(b64,mime,prompt){
     // Demo mode: fixed sample answer, no network call. Tests the UI only, not the AI.
     await new Promise(r=>setTimeout(r,900));
     return JSON.stringify({rating:'High Risk',summary:'DEMO DATA — sample zones, not a real analysis',zones:[
-      {label:'⚠ Reflective glass',level:'danger',top:12,left:8,width:38,height:46},
-      {label:'⚠ Corner glazing',level:'warn',top:20,left:58,width:30,height:35},
-      {label:'✓ Patterned panel',level:'safe',top:66,left:30,width:40,height:22}]});
+      {label:'⚠ Reflective glass',level:'danger',box_2d:[120,80,580,460]},
+      {label:'⚠ Corner glazing',level:'warn',box_2d:[200,580,550,880]},
+      {label:'✓ Patterned panel',level:'safe',box_2d:[660,300,880,700]}]});
   }
   const cfg=PROVIDERS[currentProvider];
   if(currentProvider==='gemini'){
     const url=`https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${apiKey}`;
-    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],generationConfig:{maxOutputTokens:1200}})});
+    const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mime,data:b64}},{text:prompt}]}],generationConfig:{maxOutputTokens:1200,temperature:0.1,responseMimeType:'application/json'}})});
     const d=await r.json();
     if(d.error){const e=new Error(d.error.message);e.status=r.status||d.error.code;throw e;}
     return d.candidates?.[0]?.content?.parts?.[0]?.text||'';
@@ -917,7 +917,16 @@ async function callAIOnce(b64,mime,prompt){
 
 async function callAI(b64,mime,isLive){
   const isZh=currentLang==='zh';
-  const livePrompt=`You are a bird-friendly architecture AI. Analyze this building image for bird collision hazards. Return ONLY valid JSON, no markdown: {"rating":"${isZh?'友好|中等风险|高危':'Friendly|Medium Risk|High Risk'}","summary":"${isZh?'20字内':'under 15 words'}","zones":[{"label":"⚠ label","level":"danger|warn|safe","top":10,"left":20,"width":40,"height":50}]}. Zones as % of image. Empty zones=[] if safe. ${isZh?'Labels in Chinese.':'Labels in English.'}`;
+  // Prompt v2: grounded hazard rules + box_2d coordinates (Gemini's native detection format,
+  // [ymin,xmin,ymax,xmax] scaled 0-1000), which is far more reliable than free-form % boxes.
+  const livePrompt=`You are an expert in bird-friendly building design. Find bird-collision hazards in this photo.
+Hazard rules (only mark what is actually visible):
+- danger: large glass that reflects sky, trees or vegetation; see-through glass (glass corners, glass bridges, glass railings, windows facing each other); glass next to trees or plants.
+- warn: medium glass areas with some reflection; glass behind a few thin mullions.
+- safe: glass with visible dots/lines/patterns, external screens, louvres or fritting; solid walls are NOT zones.
+Rules: each box tightly encloses ONE glass area (a window band, a glazed corner, a railing). Do not box sky, trees, people or the whole building. Max 8 zones. If no glass is visible, zones=[].
+Return ONLY JSON, no markdown: {"rating":"${isZh?'友好|中等风险|高危':'Friendly|Medium Risk|High Risk'}","summary":"${isZh?'20字内':'under 15 words'}","zones":[{"label":"short reason","level":"danger|warn|safe","box_2d":[ymin,xmin,ymax,xmax]}]}
+box_2d values are integers 0-1000 relative to image height (y) and width (x). ${isZh?'Labels and summary in Chinese.':'Labels and summary in English.'}`;
   const uploadPrompt=isZh?`你是专业的鸟类友好建筑分析AI。分析此建筑图片的鸟类碰撞危险。用中文回复（不要Markdown）：\n评级：[友好/中等风险/高危]\n总结：（30字内）\n危险区域：\n- 区域：原因\n安全元素：\n- 元素：原因\n改进建议：\n- 建议`:`You are a bird-friendly architecture AI. Analyze this building image for bird collision hazards. Reply in English (no Markdown):\nRating: [Friendly/Medium Risk/High Risk]\nSummary: (max 20 words)\nHazard Zones:\n- zone: reason\nSafe Elements:\n- element: reason\nImprovements:\n- suggestion`;
   const prompt=livePrompt; // both modes return JSON zones so boxes can be drawn
   const MAX=2;let lastErr=null;
@@ -953,7 +962,15 @@ async function callAI(b64,mime,isLive){
 function renderLiveBoxes(zones){
   const ov=currentMode==='upload'?$id('upDangerOverlay'):$id('dangerOverlay');
   if(!zones||!zones.length){ov.innerHTML='';return;}
-  ov.innerHTML=zones.map(z=>`<div class="d-box ${z.level}" style="top:${z.top}%;left:${z.left}%;width:${z.width}%;height:${z.height}%;"><div class="d-lbl">${z.label}</div></div>`).join('');
+  const cl=v=>Math.max(0,Math.min(100,+v||0));
+  ov.innerHTML=zones.map(z=>{
+    let t=z.top,l=z.left,w=z.width,h=z.height;
+    if(Array.isArray(z.box_2d)&&z.box_2d.length===4){const[y0,x0,y1,x1]=z.box_2d.map(Number);t=y0/10;l=x0/10;h=(y1-y0)/10;w=(x1-x0)/10;}
+    t=cl(t);l=cl(l);w=Math.min(cl(w),100-l);h=Math.min(cl(h),100-t);
+    const lvl=['danger','warn','safe'].includes(z.level)?z.level:'warn';
+    const lbl=String(z.label||'').replace(/[<>&]/g,'');
+    return w>0&&h>0?`<div class="d-box ${lvl}" style="top:${t}%;left:${l}%;width:${w}%;height:${h}%;"><div class="d-lbl">${lbl}</div></div>`:'';
+  }).join('');
 }
 
 function showLiveStrip(msg){
