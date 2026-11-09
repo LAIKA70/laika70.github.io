@@ -333,6 +333,7 @@ body{font-family:'Outfit','Noto Sans SC',sans-serif;background:var(--bg);color:v
           </div>
           <div class="viewport-wrap" id="upPreviewWrap" style="display:none;">
             <img id="upPreviewImg" alt="facade">
+            <canvas id="upCanvas"></canvas>
             <div class="mode-chip" id="imgChip">HUMAN · 400–700 nm</div>
             <div id="upDangerOverlay" style="position:absolute;inset:0;pointer-events:none;"></div>
           </div>
@@ -664,7 +665,7 @@ function setVision(v){
   $id('visionNote').textContent=VNOTES[v][currentLang==='zh'?'zh':'en'];
   const chip=$id('modeChip'); if(chip){chip.textContent=VCHIPS[v];chip.style.display=camActive?'block':'none';}
   $id('imgChip').textContent=VCHIPS[v];
-  const upImg=$id('upPreviewImg'); if(upImg)upImg.style.filter=VFILTERS[v];
+  renderUpload();
   if(camActive)applyVisionLive();
 }
 
@@ -754,6 +755,22 @@ function drawUVVignette(ctx,W,H){
 }
 
 // ── FILE UPLOAD ──
+// Uploaded photos go through the same canvas pipeline as the live camera,
+// so Bird UV / Bird Full look identical in both modes.
+let uploadedImg=null;
+function renderUpload(){
+  const pImg=$id('upPreviewImg'),cvs=$id('upCanvas');
+  if(!pImg||!cvs)return;
+  if(!uploadedImg||visionMode==='human'){pImg.style.display='block';pImg.style.filter='none';cvs.style.display='none';return;}
+  const MAX=1280,sc=Math.min(1,MAX/Math.max(uploadedImg.naturalWidth,uploadedImg.naturalHeight));
+  const W=Math.round(uploadedImg.naturalWidth*sc),H=Math.round(uploadedImg.naturalHeight*sc);
+  const src=document.createElement('canvas');src.width=W;src.height=H;
+  src.getContext('2d').drawImage(uploadedImg,0,0,W,H);
+  cvs.width=W;cvs.height=H;const ctx=cvs.getContext('2d');
+  if(visionMode==='full'){drawFisheye(ctx,src,W,H);applyUVShift(ctx,W,H);drawBinocularMask(ctx,W,H);drawUVVignette(ctx,W,H);}
+  else{ctx.drawImage(src,0,0);applyUVShift(ctx,W,H);}
+  cvs.style.display='block';pImg.style.display='none';
+}
 function handleFile(e){
   const file=e.target.files[0]; if(!file)return;
   const reader=new FileReader();
@@ -765,11 +782,12 @@ function handleFile(e){
       cvs.getContext('2d').drawImage(img,0,0);
       const jpegUrl=cvs.toDataURL('image/jpeg',0.92);
       uploadedB64=jpegUrl.split(',')[1];uploadedMime='image/jpeg';
-      const pImg=$id('upPreviewImg');
-      pImg.src=src;pImg.style.filter=VFILTERS[visionMode];
+      uploadedImg=img;
+      $id('upPreviewImg').src=src;
       $id('uploadEmpty').style.display='none';
       $id('upPreviewWrap').style.display='block';
       $id('upDangerOverlay').innerHTML='';
+      renderUpload();
       clearResult();updateBanners();
     };
     img.src=src;
